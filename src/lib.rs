@@ -78,6 +78,14 @@ impl<'a> StrCursor<'a> {
             self.s.slice_unchecked(self.byte_pos(), self.s.len())
         }
     }
+    
+    pub fn char_before(&self) -> Option<char> {
+        self.at_prev_cp().and_then(|cur| cur.char_after())
+    }
+    
+    pub fn char_after(&self) -> Option<char> {
+        self.slice_after().chars().next()
+    }
 
     pub fn byte_pos(&self) -> usize {
         self.at as usize - self.s.as_ptr() as usize
@@ -176,6 +184,25 @@ fn test_at_next_cp() {
     assert_eq!(bps, vec![3, 6, 9, 10, 14, 17]);
 }
 
+#[cfg(test)]
+#[test]
+fn test_char_before_and_after() {
+    let s = "大嫌い,💪❤";
+    let cur = StrCursor::new_at_start(s);
+    let r = test_util::finite_iterate_lead(cur, StrCursor::at_next_cp)
+        .map(|cur| (cur.byte_pos(), cur.char_before(), cur.char_after()))
+        .collect::<Vec<_>>();
+    assert_eq!(r, vec![
+        (0, None, Some('大')),
+        (3, Some('大'), Some('嫌')),
+        (6, Some('嫌'), Some('い')),
+        (9, Some('い'), Some(',')),
+        (10, Some(','), Some('💪')),
+        (14, Some('💪'), Some('❤')),
+        (17, Some('❤'), None)
+    ]);
+}
+
 unsafe fn seek_utf8_cp_start_left(s: &str, mut from: *const u8) -> *const u8 {
     let beg = s.as_ptr();
     while from > beg && (*from & 0b11_00_0000 == 0b10_00_0000) {
@@ -248,5 +275,39 @@ mod test_util {
         T: Clone,
     {
         FiniteIter(Some(seed), f)
+    }
+    pub struct FiniteIterLead<T, F>(Option<T>, F, bool);
+    
+    impl<T, F> Iterator for FiniteIterLead<T, F>
+    where
+        F: FnMut(T) -> Option<T>,
+        T: Clone,
+    {
+        type Item = T;
+        
+        fn next(&mut self) -> Option<Self::Item> {
+            if !self.2 {
+                self.2 = true;
+                return self.0.clone();
+            }
+
+            self.0.take().and_then(|last| {
+                match (self.1)(last) {
+                    Some(e) => {
+                        self.0 = Some(e);
+                        self.0.clone()
+                    },
+                    None => None
+                }
+            })
+        }
+    }
+    
+    pub fn finite_iterate_lead<T, F>(seed: T, f: F) -> FiniteIterLead<T, F>
+    where
+        F: FnMut(T) -> Option<T>,
+        T: Clone,
+    {
+        FiniteIterLead(Some(seed), f, false)
     }
 }
