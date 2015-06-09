@@ -1,6 +1,3 @@
-// use std::marker::PhantomData;
-// use std::slice;
-
 pub struct StrCursor<'a> {
     s: &'a str,
     at: *const u8,
@@ -78,11 +75,11 @@ impl<'a> StrCursor<'a> {
             self.s.slice_unchecked(self.byte_pos(), self.s.len())
         }
     }
-    
+
     pub fn char_before(&self) -> Option<char> {
         self.at_prev_cp().and_then(|cur| cur.char_after())
     }
-    
+
     pub fn char_after(&self) -> Option<char> {
         self.slice_after().chars().next()
     }
@@ -248,14 +245,14 @@ fn test_seek_utf8_cp_start_right() {
 #[cfg(test)]
 mod test_util {
     pub struct FiniteIter<T, F>(Option<T>, F);
-    
+
     impl<T, F> Iterator for FiniteIter<T, F>
     where
         F: FnMut(T) -> Option<T>,
         T: Clone,
     {
         type Item = T;
-        
+
         fn next(&mut self) -> Option<Self::Item> {
             self.0.take().and_then(|last| {
                 match (self.1)(last) {
@@ -268,7 +265,7 @@ mod test_util {
             })
         }
     }
-    
+
     pub fn finite_iterate<T, F>(seed: T, f: F) -> FiniteIter<T, F>
     where
         F: FnMut(T) -> Option<T>,
@@ -277,14 +274,14 @@ mod test_util {
         FiniteIter(Some(seed), f)
     }
     pub struct FiniteIterLead<T, F>(Option<T>, F, bool);
-    
+
     impl<T, F> Iterator for FiniteIterLead<T, F>
     where
         F: FnMut(T) -> Option<T>,
         T: Clone,
     {
         type Item = T;
-        
+
         fn next(&mut self) -> Option<Self::Item> {
             if !self.2 {
                 self.2 = true;
@@ -302,7 +299,7 @@ mod test_util {
             })
         }
     }
-    
+
     pub fn finite_iterate_lead<T, F>(seed: T, f: F) -> FiniteIterLead<T, F>
     where
         F: FnMut(T) -> Option<T>,
