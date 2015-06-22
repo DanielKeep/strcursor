@@ -3,5 +3,11 @@ name = "strcursor"
 version = "0.1.0"
 authors = ["Daniel Keep <daniel.keep@gmail.com>"]
 
+description = "Provides a string cursor type for seeking through a string whilst respecting grapheme cluster and code point boundaries."
+repository = "https://github.com/DanielKeep/strcursor"
+readme = "README.md"
+keywords = ["str", "string", "cursor", "grapheme", "unicode"]
+license = "MIT"
+
 [dependencies]
 unicode-segmentation = "0.1.0"
