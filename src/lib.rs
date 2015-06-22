@@ -10,6 +10,8 @@ use uniseg::UnicodeSegmentation as UniSeg;
 /**
 This type represents a cursor into a string slice; that is, in addition to having a beginning and end, it also has a current position between those two.  This position can be seeked left and right within those bounds.
 
+> **Note**: the cursor may validly be positioned *at* the end of the string.  That is, in a position where there are no code points or grapheme clusters to the right of the cursor, and the entire contents of the string is to the left of the cursor.
+
 The main reason for this is that *sometimes*, you want the ability to do things like "advance a character", and the existing APIs for this can be somewhat verbose.
 
 The cursor guarantees the following at all times:
@@ -18,7 +20,9 @@ The cursor guarantees the following at all times:
 * The cursor position *cannot* lie between unicode code points, meaning that you *cannot* generate an invalid string slice from a cursor.
 * If the codepoint-specific methods are *not* used, the cursor will always lie between grapheme clusters.
 
-This last point is somewhat important: the cursor is designed to favour operating on grapheme clusters, rather than codepoints.  If you LASTEDIT
+This last point is somewhat important: the cursor is designed to favour operating on grapheme clusters, rather than codepoints.  If you mis-align the cursor with respect to grapheme clusters, the behaviour of methods that deal with grapheme clusters is *undefined*.
+
+The methods that operate on the cursor will either return a fresh `Option<StrCursor>` (depending on whether the seek operation is valid or not), or mutate the existing cursor (in which case, they will *panic* if the seek operation is not valid).
 */
 pub struct StrCursor<'a> {
     s: &'a str,
@@ -26,6 +30,9 @@ pub struct StrCursor<'a> {
 }
 
 impl<'a> StrCursor<'a> {
+    /**
+    Create a new cursor at the start of `s`.
+    */
     #[inline]
     pub fn new_at_start(s: &'a str) -> StrCursor<'a> {
         StrCursor {
@@ -34,6 +41,9 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Create a new cursor past at the end of `s`.
+    */
     #[inline]
     pub fn new_at_end(s: &'a str) -> StrCursor<'a> {
         StrCursor {
@@ -42,22 +52,9 @@ impl<'a> StrCursor<'a> {
         }
     }
 
-    #[inline]
-    pub fn new_at_cp_left_of_byte_pos(s: &'a str, byte_pos: usize) -> StrCursor<'a> {
-        StrCursor {
-            s: s,
-            at: unsafe { seek_utf8_cp_start_left(s, byte_pos_to_ptr(s, byte_pos)) },
-        }
-    }
-
-    #[inline]
-    pub fn new_at_cp_right_of_byte_pos(s: &'a str, byte_pos: usize) -> StrCursor<'a> {
-        StrCursor {
-            s: s,
-            at: unsafe { seek_utf8_cp_start_right(s, byte_pos_to_ptr(s, byte_pos)) },
-        }
-    }
-
+    /**
+    Create a new cursor at the first grapheme cluster which begins at or to the left of the given byte position.
+    */
     #[inline]
     pub fn new_at_left_of_byte_pos(s: &'a str, byte_pos: usize) -> StrCursor<'a> {
         // Start at a codepoint.
@@ -79,6 +76,9 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Create a new cursor at the first grapheme cluster which begins at or to the right of the given byte position.
+    */
     #[inline]
     pub fn new_at_right_of_byte_pos(s: &'a str, byte_pos: usize) -> StrCursor<'a> {
         // I don't know how robust the grapheme iteration rules are when trying to step forward from a (potentially) invalid position.  As such, I'm *instead* going to start from a known-good position.
@@ -91,22 +91,39 @@ impl<'a> StrCursor<'a> {
         cur.at_next().unwrap()
     }
 
+    /**
+    Create a new cursor at the first code point which begins at or to the left of the given byte position.
+
+    # Note
+
+    Where possible, you should prefer `new_at_left_of_byte_pos`.
+    */
     #[inline]
-    pub fn at_prev_cp(mut self) -> Option<StrCursor<'a>> {
-        match self.try_seek_left_cp() {
-            true => Some(self),
-            false => None
+    pub fn new_at_cp_left_of_byte_pos(s: &'a str, byte_pos: usize) -> StrCursor<'a> {
+        StrCursor {
+            s: s,
+            at: unsafe { seek_utf8_cp_start_left(s, byte_pos_to_ptr(s, byte_pos)) },
         }
     }
 
+    /**
+    Create a new cursor at the first code point which begins at or to the right of the given byte position.
+
+    # Note
+
+    Where possible, you should prefer `new_at_right_of_byte_pos`.
+    */
     #[inline]
-    pub fn at_next_cp(mut self) -> Option<StrCursor<'a>> {
-        match self.try_seek_right_cp() {
-            true => Some(self),
-            false => None
+    pub fn new_at_cp_right_of_byte_pos(s: &'a str, byte_pos: usize) -> StrCursor<'a> {
+        StrCursor {
+            s: s,
+            at: unsafe { seek_utf8_cp_start_right(s, byte_pos_to_ptr(s, byte_pos)) },
         }
     }
 
+    /**
+    Returns a new cursor at the beginning of the previous grapheme cluster, or `None` if the cursor is currently positioned at the beginning of the string.
+    */
     #[inline]
     pub fn at_prev(mut self) -> Option<StrCursor<'a>> {
         match self.try_seek_left_gr() {
@@ -115,6 +132,9 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Returns a new cursor at the beginning of the next grapheme cluster, or `None` if the cursor is currently positioned at the end of the string.
+    */
     #[inline]
     pub fn at_next(mut self) -> Option<StrCursor<'a>> {
         match self.try_seek_right_gr() {
@@ -123,20 +143,43 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Returns a new cursor at the beginning of the previous code point, or `None` if the cursor is currently positioned at the beginning of the string.
+
+    # Note
+
+    Where possible, you should prefer `at_prev`.
+    */
     #[inline]
-    pub fn seek_prev_cp(&mut self) {
-        if !self.try_seek_left_cp() {
-            panic!("cannot seek past the beginning of a string");
+    pub fn at_prev_cp(mut self) -> Option<StrCursor<'a>> {
+        match self.try_seek_left_cp() {
+            true => Some(self),
+            false => None
         }
     }
 
+    /**
+    Returns a new cursor at the beginning of the next code point, or `None` if the cursor is currently positioned at the end of the string.
+
+    # Note
+
+    Where possible, you should prefer `at_next`.
+    */
     #[inline]
-    pub fn seek_next_cp(&mut self) {
-        if !self.try_seek_right_cp() {
-            panic!("cannot seek past the end of a string");
+    pub fn at_next_cp(mut self) -> Option<StrCursor<'a>> {
+        match self.try_seek_right_cp() {
+            true => Some(self),
+            false => None
         }
     }
 
+    /**
+    Seeks the cursor to the beginning of the previous grapheme cluster.
+
+    # Panics
+
+    If the cursor is currently at the start of the string, then this function will panic.
+    */
     #[inline]
     pub fn seek_prev(&mut self) {
         if !self.try_seek_right_gr() {
@@ -144,6 +187,13 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Seeks the cursor to the beginning of the next grapheme cluster.
+
+    # Panics
+
+    If the cursor is currently at the end of the string, then this function will panic.
+    */
     #[inline]
     pub fn seek_next(&mut self) {
         if !self.try_seek_right_gr() {
@@ -151,6 +201,61 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Seeks the cursor to the beginning of the previous grapheme cluster.
+
+    # Panics
+
+    If the cursor is currently at the start of the string, then this function will panic.
+
+    # Note
+
+    Where possible, you should prefer `seek_prev`.
+    */
+    #[inline]
+    pub fn seek_prev_cp(&mut self) {
+        if !self.try_seek_left_cp() {
+            panic!("cannot seek past the beginning of a string");
+        }
+    }
+
+    /**
+    Seeks the cursor to the beginning of the next grapheme cluster.
+
+    # Panics
+
+    If the cursor is currently at the end of the string, then this function will panic.
+
+    # Note
+
+    Where possible, you should prefer `seek_next`.
+    */
+    #[inline]
+    pub fn seek_next_cp(&mut self) {
+        if !self.try_seek_right_cp() {
+            panic!("cannot seek past the end of a string");
+        }
+    }
+
+    /**
+    Returns the grapheme cluster immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
+    */
+    #[inline]
+    pub fn before(&self) -> Option<&'a str> {
+        self.at_prev().and_then(|cur| cur.after())
+    }
+
+    /**
+    Returns the grapheme cluster immediately to the right of the cursor, or `None` is the cursor is at the end of the string.
+    */
+    #[inline]
+    pub fn after(&self) -> Option<&'a str> {
+        UniSeg::graphemes(self.slice_after(), /*is_extended:*/true).next()
+    }
+
+    /**
+    Returns the contents of the string to the left of the cursor.
+    */
     #[inline]
     pub fn slice_before(&self) -> &'a str {
         unsafe {
@@ -158,6 +263,9 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Returns the contents of the string to the right of the cursor.
+    */
     #[inline]
     pub fn slice_after(&self) -> &'a str {
         unsafe {
@@ -165,26 +273,25 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Returns the code point immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
+    */
     #[inline]
     pub fn cp_before(&self) -> Option<char> {
         self.at_prev_cp().and_then(|cur| cur.cp_after())
     }
 
+    /**
+    Returns the code point immediately to the right of the cursor, or `None` is the cursor is at the end of the string.
+    */
     #[inline]
     pub fn cp_after(&self) -> Option<char> {
         self.slice_after().chars().next()
     }
 
-    #[inline]
-    pub fn before(&self) -> Option<&'a str> {
-        self.at_prev().and_then(|cur| cur.after())
-    }
-
-    #[inline]
-    pub fn after(&self) -> Option<&'a str> {
-        UniSeg::graphemes(self.slice_after(), /*is_extended:*/true).next()
-    }
-
+    /**
+    Returns the cursor's current position within the string as the number of UTF-8 code units from the beginning of the string.
+    */
     #[inline]
     pub fn byte_pos(&self) -> usize {
         self.at as usize - self.s.as_ptr() as usize
