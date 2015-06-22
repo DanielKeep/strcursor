@@ -1,7 +1,25 @@
+/*!
+This crate provides a simple "cursor" type for string slices.  It provides the ability to safely seek back and forth through a string without worrying about producing invalid UTF-8 sequences, or splitting grapheme clusters.
+
+See the `StrCursor` type for details.
+*/
 extern crate unicode_segmentation as uniseg;
 
 use uniseg::UnicodeSegmentation as UniSeg;
 
+/**
+This type represents a cursor into a string slice; that is, in addition to having a beginning and end, it also has a current position between those two.  This position can be seeked left and right within those bounds.
+
+The main reason for this is that *sometimes*, you want the ability to do things like "advance a character", and the existing APIs for this can be somewhat verbose.
+
+The cursor guarantees the following at all times:
+
+* The cursor position *cannot* be outside of the original string slice it was constructed with.
+* The cursor position *cannot* lie between unicode code points, meaning that you *cannot* generate an invalid string slice from a cursor.
+* If the codepoint-specific methods are *not* used, the cursor will always lie between grapheme clusters.
+
+This last point is somewhat important: the cursor is designed to favour operating on grapheme clusters, rather than codepoints.  If you LASTEDIT
+*/
 pub struct StrCursor<'a> {
     s: &'a str,
     at: *const u8,
@@ -242,6 +260,42 @@ impl<'a> Clone for StrCursor<'a> {
 impl<'a> std::fmt::Debug for StrCursor<'a> {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(fmt, "StrCursor({:?} | {:?})", self.slice_before(), self.slice_after())
+    }
+}
+
+impl<'a> Eq for StrCursor<'a> {}
+
+impl<'a> PartialEq for StrCursor<'a> {
+    fn eq(&self, other: &StrCursor<'a>) -> bool {
+        (self.at == other.at)
+        && (self.s.as_ptr() == other.s.as_ptr())
+        && (self.s.len() == other.s.len())
+    }
+
+    fn ne(&self, other: &StrCursor<'a>) -> bool {
+        (self.at != other.at)
+        || (self.s.as_ptr() != other.s.as_ptr())
+        || (self.s.len() != other.s.len())
+    }
+}
+
+impl<'a> PartialOrd for StrCursor<'a> {
+    fn partial_cmp(&self, other: &StrCursor<'a>) -> Option<std::cmp::Ordering> {
+        // If the cursors are from different strings, they are unordered.
+        if (self.s.as_ptr() != other.s.as_ptr()) || (self.s.len() != other.s.len()) {
+            None
+        } else {
+            self.at.partial_cmp(&other.at)
+        }
+    }
+}
+
+impl<'a> std::hash::Hash for StrCursor<'a> {
+    fn hash<H>(&self, state: &mut H)
+    where H: std::hash::Hasher {
+        self.s.as_ptr().hash(state);
+        self.s.len().hash(state);
+        self.at.hash(state);
     }
 }
 
