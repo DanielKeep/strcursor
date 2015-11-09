@@ -274,6 +274,27 @@ impl<'a> StrCursor<'a> {
     }
 
     /**
+    Returns the contents of the string *between* this cursor and another cursor.
+
+    Returns `None` if the cursors are from different strings (even different subsets of the same string).
+    */
+    #[inline]
+    pub fn slice_between(&self, until: StrCursor<'a>) -> Option<&'a str> {
+        if !str_eq_literal(self.s, until.s) {
+            None
+        } else {
+            use std::cmp::{max, min};
+            unsafe {
+                let beg = min(self.at, until.at);
+                let end = max(self.at, until.at);
+                let len = end as usize - beg as usize;
+                let bytes = ::std::slice::from_raw_parts(beg, len);
+                Some(::std::str::from_utf8_unchecked(bytes))
+            }
+        }
+    }
+
+    /**
     Returns the code point immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
     */
     #[inline]
@@ -605,6 +626,20 @@ fn test_char_before_and_after() {
     ]);
 }
 
+#[cfg(test)]
+#[test]
+fn test_slice_between() {
+    let s = "they hit, fight, kick, wreak havoc, and rejoice";
+    let cur0 = StrCursor::new_at_start(s);
+    let cur1 = StrCursor::new_at_end(s);
+    let cur2 = StrCursor::new_at_end("nobody knows what they're lookin' for");
+    let cur3 = StrCursor::new_at_end(&s[1..]);
+    assert_eq!(cur0.slice_between(cur1), Some(s));
+    assert_eq!(cur1.slice_between(cur0), Some(s));
+    assert_eq!(cur0.slice_between(cur2), None);
+    assert_eq!(cur0.slice_between(cur3), None);
+}
+
 #[inline]
 fn byte_pos_to_ptr(s: &str, byte_pos: usize) -> *const u8 {
     if s.len() < byte_pos {
@@ -656,6 +691,22 @@ fn test_seek_utf8_cp_start_right() {
     assert_eq!(unsafe { seek_utf8_cp_start_right(s, &b[3]) }, &b[3]);
     assert_eq!(unsafe { seek_utf8_cp_start_right(s, &b[4]) }, &b[6]);
     assert_eq!(unsafe { seek_utf8_cp_start_right(s, &b[5]) }, &b[6]);
+}
+
+#[inline]
+fn str_eq_literal(a: &str, b: &str) -> bool {
+    a.as_bytes().as_ptr() == b.as_bytes().as_ptr()
+        && a.len() == b.len()
+}
+
+#[cfg(test)]
+#[test]
+fn test_str_eq_literal() {
+    let s = "hare hare yukai";
+    assert!(str_eq_literal(s, s));
+    assert!(str_eq_literal(&s[0..4], &s[0..4]));
+    assert!(!str_eq_literal(&s[0..4], &s[5..9]));
+    assert!(!str_eq_literal(&s[0..4], &s[0..3]));
 }
 
 #[cfg(test)]
