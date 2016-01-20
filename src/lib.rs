@@ -202,7 +202,7 @@ impl<'a> StrCursor<'a> {
     }
 
     /**
-    Seeks the cursor to the beginning of the previous grapheme cluster.
+    Seeks the cursor to the beginning of the previous code point.
 
     # Panics
 
@@ -220,7 +220,7 @@ impl<'a> StrCursor<'a> {
     }
 
     /**
-    Seeks the cursor to the beginning of the next grapheme cluster.
+    Seeks the cursor to the beginning of the next code point.
 
     # Panics
 
