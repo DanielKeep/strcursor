@@ -502,18 +502,27 @@ impl<'a> StrCursor<'a> {
         }
     }
 
+    /**
+    Seeks exactly `bytes` left, without performing any bounds or validity checks.
+    */
     #[inline]
-    unsafe fn unsafe_seek_left(&mut self, bytes: usize) {
+    pub unsafe fn unsafe_seek_left(&mut self, bytes: usize) {
         self.at = self.at.offset(-(bytes as isize));
     }
 
+    /**
+    Seeks exactly `bytes` right, without performing any bounds or validity checks.
+    */
     #[inline]
-    unsafe fn unsafe_seek_right(&mut self, bytes: usize) {
+    pub unsafe fn unsafe_seek_right(&mut self, bytes: usize) {
         self.at = self.at.offset(bytes as isize);
     }
 
+    /**
+    Seeks to the start of `s`, without performing any bounds or validity checks.
+    */
     #[inline]
-    unsafe fn unsafe_set_at(&mut self, s: &'a str) {
+    pub unsafe fn unsafe_set_at(&mut self, s: &'a str) {
         self.at = s.as_bytes().as_ptr();
     }
 }
