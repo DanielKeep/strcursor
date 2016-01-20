@@ -1,5 +1,5 @@
 /*
-Copyright ⓒ 2015 Daniel Keep.
+Copyright ⓒ 2015, 2016 Daniel Keep.
 
 Licensed under the MIT license (see LICENSE or <http://opensource.org
 /licenses/MIT>) or the Apache License, Version 2.0 (see LICENSE of
