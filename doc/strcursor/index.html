@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `strcursor` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, strcursor">
+
+    <title>strcursor - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'strcursor', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>strcursor</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/strcursor/lib.rs.html#10-1081' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>This crate provides a &quot;cursor&quot; type for string slices.  It provides the ability to safely seek back and forth through a string without worrying about producing invalid UTF-8 sequences, or splitting grapheme clusters.</p>
+
+<p>In addition, it provides types to represent single grapheme clusters (<a href="struct.Gc.html"><code>Gc</code></a> and <a href="struct.GcBuf.html"><code>GcBuf</code></a>) as distinct from arbitrary string slices.</p>
+
+<p>See the <a href="struct.StrCursor.html"><code>StrCursor</code></a> type for details.</p>
+
+<style type="text/css">
+.link-block { font-family: "Fira Sans"; }
+.link-block > p { display: inline-block; }
+.link-block > p > strong { font-weight: 500; margin-right: 1em; }
+.link-block > ul { display: inline-block; padding: 0; list-style: none; }
+.link-block > ul > li {
+  font-size: 0.8em;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  padding: 0.3em;
+  display: inline-block;
+}
+</style>
+
+<p><span></span><div class="link-block"></p>
+
+<p><strong>Links</strong></p>
+
+<ul>
+<li><a href="https://crates.io/crates/strcursor/">Latest Release</a></li>
+<li><a href="https://danielkeep.github.io/strcursor/doc/strcursor/index.html">Latest Docs</a></li>
+<li><a href="https://github.com/DanielKeep/strcursor">Repository</a></li>
+</ul>
+
+<p><span></span></div></p>
+
+<h2 id='compatibility' class='section-header'><a href='#compatibility'>Compatibility</a></h2>
+<p><code>strcursor</code> is currently supported on <code>rustc</code> version 1.1.0 and higher.</p>
+
+<ul>
+<li><p><code>rustc</code> &lt; 1.4 will use a larger, less space-efficient implementation of <code>GcBuf</code>; rather than being the same size as <code>Box&lt;str&gt;</code>, it will be the same size as <code>String</code>.</p></li>
+<li><p><code>rustc</code> &lt; 1.1 is not supported, due to a mysterious compiler crash.</p></li>
+</ul>
+</div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
+<table><tr><td><code>pub use grapheme::<a class="struct" href="../strcursor/grapheme/struct.Gc.html" title="struct strcursor::grapheme::Gc">Gc</a>;</code></td></tr><tr><td><code>pub use grapheme::<a class="struct" href="../strcursor/grapheme/struct.GcBuf.html" title="struct strcursor::grapheme::GcBuf">GcBuf</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="grapheme/index.html"
+                                  title='mod strcursor::grapheme'>grapheme</a></td>
+                           <td class='docblock-short'>
+                                <p>Defines types for representing single grapheme clusters.</p>
+                           </td>
+                       </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.StrCursor.html"
+                                  title='struct strcursor::StrCursor'>StrCursor</a></td>
+                           <td class='docblock-short'>
+                                <p>This type represents a cursor into a string slice; that is, in addition to having a beginning and end, it also has a current position between those two.  This position can be seeked left and right within those bounds.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "strcursor";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["grapheme","Defines types for representing single grapheme clusters."]],"struct":[["StrCursor","This type represents a cursor into a string slice; that is, in addition to having a beginning and end, it also has a current position between those two.  This position can be seeked left and right within those bounds."]]});
