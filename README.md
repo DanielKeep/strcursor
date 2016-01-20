@@ -2,9 +2,34 @@
 
 **Note**: This is something of a work-in-progress.  It has tests, but hasn't been exhaustively vetted.
 
-This provides a `StrCursor` type that allows you to seek back and forth through a `&str`.  Importantly, it respects both codepoint and *grapheme cluster* boundaries.
+This crate provides a "cursor" type for string slices.  It provides the ability to safely seek back and forth through a string without worrying about producing invalid UTF-8 sequences, or splitting grapheme clusters.
 
-If you're not sure what those words mean: don't use methods with `cp` in the name; they're probably not what you want.
+In addition, it provides types to represent single grapheme clusters ([`Gc`](struct.Gc.html) and [`GcBuf`](struct.GcBuf.html)) as distinct from arbitrary string slices.
+
+See the [`StrCursor`](struct.StrCursor.html) type for details.
+
+<style type="text/css">
+.link-block { font-family: "Fira Sans"; }
+.link-block > p { display: inline-block; }
+.link-block > p > strong { font-weight: 500; margin-right: 1em; }
+.link-block > ul { display: inline-block; padding: 0; list-style: none; }
+.link-block > ul > li {
+  font-size: 0.8em;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  padding: 0.3em;
+  display: inline-block;
+}
+</style>
+<span></span><div class="link-block">
+
+**Links**
+
+* [Latest Release](https://crates.io/crates/strcursor/)
+* [Latest Docs](https://danielkeep.github.io/strcursor/doc/strcursor/index.html)
+* [Repository](https://github.com/DanielKeep/strcursor)
+
+<span></span></div>
 
 ## License
 

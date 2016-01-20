@@ -8,16 +8,41 @@ files in the project carrying such notice may not be copied, modified,
 or distributed except according to those terms.
 */
 /*!
-This crate provides a simple "cursor" type for string slices.  It provides the ability to safely seek back and forth through a string without worrying about producing invalid UTF-8 sequences, or splitting grapheme clusters.
+This crate provides a "cursor" type for string slices.  It provides the ability to safely seek back and forth through a string without worrying about producing invalid UTF-8 sequences, or splitting grapheme clusters.
 
-See the `StrCursor` type for details.
+In addition, it provides types to represent single grapheme clusters ([`Gc`](struct.Gc.html) and [`GcBuf`](struct.GcBuf.html)) as distinct from arbitrary string slices.
+
+See the [`StrCursor`](struct.StrCursor.html) type for details.
+
+<style type="text/css">
+.link-block { font-family: "Fira Sans"; }
+.link-block > p { display: inline-block; }
+.link-block > p > strong { font-weight: 500; margin-right: 1em; }
+.link-block > ul { display: inline-block; padding: 0; list-style: none; }
+.link-block > ul > li {
+  font-size: 0.8em;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  padding: 0.3em;
+  display: inline-block;
+}
+</style>
+<span></span><div class="link-block">
+
+**Links**
+
+* [Latest Release](https://crates.io/crates/strcursor/)
+* [Latest Docs](https://danielkeep.github.io/strcursor/doc/strcursor/index.html)
+* [Repository](https://github.com/DanielKeep/strcursor)
+
+<span></span></div>
 */
 #[macro_use] extern crate debug_unreachable;
 extern crate unicode_segmentation as uniseg;
 
 pub use grapheme::{Gc, GcBuf};
 
-mod grapheme;
+pub mod grapheme;
 mod util;
 
 use uniseg::UnicodeSegmentation as UniSeg;
@@ -29,13 +54,15 @@ This type represents a cursor into a string slice; that is, in addition to havin
 
 The main reason for this is that *sometimes*, you want the ability to do things like "advance a character", and the existing APIs for this can be somewhat verbose.
 
+In addition, *unstable* support for grapheme clusters is exposed by the standard library, which conflicts with the *stable* support provided by the `unicode-segmentation` crate, which makes doing "the right thing" painful.  `StrCursor` exposes grapheme clusters by default, and makes them cleaner to work with.
+
 The cursor guarantees the following at all times:
 
 * The cursor position *cannot* be outside of the original string slice it was constructed with.
-* The cursor position *cannot* lie between unicode code points, meaning that you *cannot* generate an invalid string slice from a cursor.
-* If the codepoint-specific methods are *not* used, the cursor will always lie between grapheme clusters.
+* The cursor position *cannot* lie between Unicode code points, meaning that you *cannot* generate an invalid string slice from a cursor.
+* If the code point-specific methods are *not* used, the cursor will always lie between grapheme clusters.
 
-This last point is somewhat important: the cursor is designed to favour operating on grapheme clusters, rather than codepoints.  If you mis-align the cursor with respect to grapheme clusters, the behaviour of methods that deal with grapheme clusters is *undefined*.
+This last point is somewhat important: the cursor is designed to favour operating on grapheme clusters, rather than code points.  If you misalign the cursor with respect to grapheme clusters, the behaviour of methods that deal with grapheme clusters is officially *undefined*, but is generally well-behaved.
 
 The methods that operate on the cursor will either return a fresh `Option<StrCursor>` (depending on whether the seek operation is valid or not), or mutate the existing cursor (in which case, they will *panic* if the seek operation is not valid).
 */

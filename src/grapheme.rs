@@ -19,25 +19,64 @@ use std::ops::Deref;
 use uniseg::UnicodeSegmentation as UniSeg;
 
 /**
-A slice of a single Unicode grapheme cluster (akin to `str`).
+An iterator over the lower case mapping of a given grapheme cluster, returned from [`Gc::to_lowercase`](struct.Gc.html#method.to_lowercase).
+*/
+pub type ToLowercase<'a> = ::std::iter::FlatMap<::std::str::Chars<'a>, ::std::char::ToLowercase, fn(char) -> ::std::char::ToLowercase>;
+
+/**
+An iterator over the lower case mapping of a given grapheme cluster, returned from [`Gc::to_uppercase`](struct.Gc.html#method.to_uppercase).
+*/
+pub type ToUppercase<'a> = ::std::iter::FlatMap<::std::str::Chars<'a>, ::std::char::ToUppercase, fn(char) -> ::std::char::ToUppercase>;
+
+/**
+A slice of a single Unicode grapheme cluster (GC) (akin to `str`).
+
+A grapheme cluster is a single visual "unit" in Unicode text, and is composed of *at least* one Unicode code point, possibly more.
+
+This type is a wrapper around `str` that enforces the additional invariant that it will *always* contain *exactly* one grapheme cluster.  This allows some operations (such as extracting the base code point) simpler.
+
+## Why Grapheme Clusters?
+
+The simplest example is the distinction between "é" ("Latin Small Letter E with Acute") and "é" ("Latin Small Letter E", "Combining Acute Accent"): the first is *one* code point, the second is *two*.
+
+In Rust, the `char` type is a single code point.  As a result, treating it as a "character" is incorrect for the same reason that using `u8` is: it excludes many legitimate characters.  It can also cause issues whereby naive algorithms may corrupt text by considering components of a grapheme cluster separately.  For example, truncating a string to "10 characters" using `char`s can lead to logical characters being broken apart, potentially changing their meaning.
+
+One inconvenience when dealing with grapheme clusters in Rust is that they are not accurately represented by any type more-so than a regular `&str`.  However, operations that might make sense on an individual character (such as asking whether it is in the ASCII range, or is numeric) don't make sense on a full string.  In addition, a `&str` can be empty or contain more than one grapheme cluster.
+
+Hence, this type guarantees that it always represents *exactly* one Unicode grapheme cluster.
 */
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Gc(str);
 
 impl Gc {
+    /**
+    Create a new `Gc` from the given string slice.
+
+    The slice must contain *exactly* one grapheme cluster.  In the event that the input is empty, or contains more than one grapheme cluster, this function will return `None`.
+
+    See: [`split_from`](#method.split_from).
+    */
     pub fn from_str(s: &str) -> Option<&Gc> {
-        unsafe {
-            match UniSeg::graphemes(s, /*is_extended:*/true).next() {
-                Some(gr) => Some(Gc::from_str_unchecked(gr)),
-                None => None
-            }
+        match Gc::split_from(s) {
+            Some((gc, tail)) => if tail.len() == 0 { Some(gc) } else { None },
+            None => None
         }
     }
 
+    /**
+    Create a new `Gc` from the given string slice.
+
+    This function *does not* check to ensure the provided slice is a single, valid grapheme cluster.
+    */
     pub unsafe fn from_str_unchecked(s: &str) -> &Gc {
         transmute(s)
     }
 
+    /**
+    Try to split a single grapheme cluster from the start of `s`.
+
+    Returns `None` if the given string was empty.
+    */
     pub fn split_from(s: &str) -> Option<(&Gc, &str)> {
         unsafe {
             let gr = match UniSeg::graphemes(s, /*is_extended:*/true).next() {
@@ -48,6 +87,9 @@ impl Gc {
         }
     }
 
+    /**
+    Returns the length of this grapheme cluster in bytes.
+    */
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -61,14 +103,25 @@ impl Gc {
         self.base_char().len_utf8() != self.as_str().len()
     }
 
+    /**
+    Converts this to a byte slice.
+    */
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
 
+    /**
+    Converts this to a string slice.
+    */
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
+    /**
+    Returns the "base" code point.
+
+    That is, this returns the first code point in the cluster.
+    */
     pub fn base_char(&self) -> char {
         unsafe {
             match self.0.chars().next() {
@@ -78,6 +131,11 @@ impl Gc {
         }
     }
 
+    /**
+    Returns the "base" code point as a grapheme cluster.
+
+    This is equivalent to converting this GC into a string slice, then slicing off the bytes that make up the first code point.
+    */
     pub fn base(&self) -> &Gc {
         unsafe {
             let base_cp = self.base_char();
@@ -86,6 +144,11 @@ impl Gc {
         }
     }
 
+    /**
+    Returns the combining marks as a string slice.
+
+    The result of this method may be empty, or of arbitrary length.
+    */
     pub fn mark_str(&self) -> &str {
         unsafe {
             let base_cp = self.base_char();
@@ -94,24 +157,39 @@ impl Gc {
         }
     }
 
+    /**
+    An iterator over the code points of this grapheme cluster.
+    */
     pub fn chars(&self) -> ::std::str::Chars {
         self.0.chars()
     }
 
+    /**
+    An iterator over the code points of this grapheme cluster, and their associated byte offsets.
+    */
     pub fn char_indices(&self) -> ::std::str::CharIndices {
         self.0.char_indices()
     }
 
+    /**
+    An iterator over the bytes of this grapheme cluster.
+    */
     pub fn bytes(&self) -> ::std::str::Bytes {
         self.0.bytes()
     }
 
-    pub fn to_lowercase(&self) -> String {
-        self.0.to_lowercase()
+    /**
+    Returns an iterator over the code points in the lower case equivalent of this grapheme cluster.
+    */
+    pub fn to_lowercase(&self) -> ToLowercase {
+        self.0.chars().flat_map(char::to_lowercase)
     }
 
-    pub fn to_uppercase(&self) -> String {
-        self.0.to_uppercase()
+    /**
+    Returns an iterator over the code points in the upper case equivalent of this grapheme cluster.
+    */
+    pub fn to_uppercase(&self) -> ToUppercase {
+        self.0.chars().flat_map(char::to_uppercase)
     }
 }
 
@@ -414,22 +492,32 @@ impl ToOwned for Gc {
     type Owned = GcBuf;
     fn to_owned(&self) -> Self::Owned {
         unsafe {
-            GcBuf::unchecked_from_string(self.0.to_owned())
+            GcBuf::from_string_unchecked(self.0.to_owned())
         }
     }
 }
 
 /**
-An owned, mutable Unicode grapheme cluster (akin to `String`).
+An owned, single Unicode grapheme cluster (akin to `String`).
+
+See [`Gc`](struct.Gc.html) for more details.
 */
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GcBuf(Box<str>);
 
 impl GcBuf {
-    unsafe fn unchecked_from_string(s: String) -> GcBuf {
+    /**
+    Create a new `GcBuf` from the given `String`.
+
+    This function *does not* check to ensure the provided string is a single, valid grapheme cluster.
+    */
+    pub unsafe fn from_string_unchecked(s: String) -> GcBuf {
         GcBuf(s.into_boxed_str())
     }
 
+    /**
+    Returns a borrowed grapheme cluster slice.
+    */
     pub fn as_gc(&self) -> &Gc {
         unsafe {
             Gc::from_str_unchecked(&self.0)
@@ -470,7 +558,7 @@ impl Debug for GcBuf {
 impl Default for GcBuf {
     fn default() -> Self {
         unsafe {
-            GcBuf::unchecked_from_string(String::from("\u{0}"))
+            GcBuf::from_string_unchecked(String::from("\u{0}"))
         }
     }
 }
@@ -491,7 +579,7 @@ impl Display for GcBuf {
 impl<'a> From<&'a Gc> for GcBuf {
     fn from(v: &'a Gc) -> Self {
         unsafe {
-            GcBuf::unchecked_from_string(v.as_str().to_owned())
+            GcBuf::from_string_unchecked(v.as_str().to_owned())
         }
     }
 }
@@ -512,7 +600,7 @@ impl From<char> for GcBuf {
             };
             let s: &str = transmute(bs);
             let s = s.to_owned();
-            GcBuf::unchecked_from_string(s)
+            GcBuf::from_string_unchecked(s)
         }
     }
 }
