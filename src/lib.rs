@@ -15,6 +15,11 @@ See the `StrCursor` type for details.
 #[macro_use] extern crate debug_unreachable;
 extern crate unicode_segmentation as uniseg;
 
+pub use grapheme::{Gc, GcBuf};
+
+mod grapheme;
+mod util;
+
 use uniseg::UnicodeSegmentation as UniSeg;
 
 /**
@@ -253,13 +258,13 @@ impl<'a> StrCursor<'a> {
     This may be more efficient than doing both operations individually.
     */
     #[inline]
-    pub fn prev(mut self) -> Option<(&'a str, StrCursor<'a>)> {
+    pub fn prev(mut self) -> Option<(&'a Gc, StrCursor<'a>)> {
         unsafe {
             let g = match self.before() {
                 Some(g) => g,
                 None => return None,
             };
-            self.unsafe_set_at(g);
+            self.unsafe_set_at(g.as_str());
             Some((g, self))
         }
     }
@@ -291,7 +296,7 @@ impl<'a> StrCursor<'a> {
     This may be more efficient than doing both operations individually.
     */
     #[inline]
-    pub fn next(mut self) -> Option<(&'a str, StrCursor<'a>)> {
+    pub fn next(mut self) -> Option<(&'a Gc, StrCursor<'a>)> {
         unsafe {
             let g = match self.after() {
                 Some(g) => g,
@@ -327,7 +332,7 @@ impl<'a> StrCursor<'a> {
     Returns the grapheme cluster immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
     */
     #[inline]
-    pub fn before(&self) -> Option<&'a str> {
+    pub fn before(&self) -> Option<&'a Gc> {
         self.at_prev().and_then(|cur| cur.after())
     }
 
@@ -335,8 +340,8 @@ impl<'a> StrCursor<'a> {
     Returns the grapheme cluster immediately to the right of the cursor, or `None` is the cursor is at the end of the string.
     */
     #[inline]
-    pub fn after(&self) -> Option<&'a str> {
-        UniSeg::graphemes(self.slice_after(), /*is_extended:*/true).next()
+    pub fn after(&self) -> Option<&'a Gc> {
+        Gc::split_from(self.slice_after()).map(|(gc, _)| gc)
     }
 
     /**
@@ -575,7 +580,7 @@ fn test_new_at_cp_right_of_byte_pos() {
 fn test_new_at_left_of_byte_pos() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
     let r = (0..s.len()+1).map(|i| (i, StrCursor::new_at_left_of_byte_pos(s, i)))
-        .map(|(i, cur)| (i, cur.byte_pos(), cur.after()))
+        .map(|(i, cur)| (i, cur.byte_pos(), cur.after().map(Gc::as_str)))
         .collect::<Vec<_>>();
     assert_eq!(r, vec![
         (0, 0, Some("J")),
@@ -620,7 +625,7 @@ fn test_new_at_left_of_byte_pos() {
 fn test_new_at_right_of_byte_pos() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
     let r = (0..s.len()+1).map(|i| (i, StrCursor::new_at_right_of_byte_pos(s, i)))
-        .map(|(i, cur)| (i, cur.byte_pos(), cur.after()))
+        .map(|(i, cur)| (i, cur.byte_pos(), cur.after().map(Gc::as_str)))
         .collect::<Vec<_>>();
     assert_eq!(r, vec![
         (0, 0, Some("J")),
@@ -688,7 +693,7 @@ fn test_at_prev_and_before() {
     let s = "noe\u{0308}l";
     let cur = StrCursor::new_at_end(s);
     let bps = test_util::finite_iterate_lead(cur, StrCursor::at_prev)
-        .map(|cur| (cur.byte_pos(), cur.after()))
+        .map(|cur| (cur.byte_pos(), cur.after().map(Gc::as_str)))
         .collect::<Vec<_>>();
     assert_eq!(bps, vec![
         (6, None),
@@ -705,7 +710,7 @@ fn test_at_next_and_after() {
     let s = "noe\u{0308}l";
     let cur = StrCursor::new_at_start(s);
     let bps = test_util::finite_iterate_lead(cur, StrCursor::at_next)
-        .map(|cur| (cur.byte_pos(), cur.after()))
+        .map(|cur| (cur.byte_pos(), cur.after().map(Gc::as_str)))
         .collect::<Vec<_>>();
     assert_eq!(bps, vec![
         (0, Some("n")),
@@ -722,7 +727,7 @@ fn test_prev() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
     let cur = StrCursor::new_at_end(s);
     let r = test_util::finite_iterate_lead(cur, StrCursor::at_prev)
-        .map(|cur| cur.prev().map(|(gr, cur)| (gr, cur.byte_pos())))
+        .map(|cur| cur.prev().map(|(gr, cur)| (gr.as_str(), cur.byte_pos())))
         .collect::<Vec<_>>();
     assert_eq!(r, vec![
         Some(("!", 32)),
@@ -787,7 +792,7 @@ fn test_next() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
     let cur = StrCursor::new_at_start(s);
     let r = test_util::finite_iterate_lead(cur, StrCursor::at_next)
-        .map(|cur| cur.next().map(|(gr, cur)| (gr, cur.byte_pos())))
+        .map(|cur| cur.next().map(|(gr, cur)| (gr.as_str(), cur.byte_pos())))
         .collect::<Vec<_>>();
     assert_eq!(r, vec![
         Some(("J", 1)),
