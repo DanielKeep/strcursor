@@ -10,4 +10,5 @@ keywords = ["str", "string", "cursor", "grapheme", "unicode"]
 license = "MIT"
 
 [dependencies]
+debug_unreachable = "0.0.6"
 unicode-segmentation = "0.1.0"

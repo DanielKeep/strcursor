@@ -3,6 +3,7 @@ This crate provides a simple "cursor" type for string slices.  It provides the a
 
 See the `StrCursor` type for details.
 */
+#[macro_use] extern crate debug_unreachable;
 extern crate unicode_segmentation as uniseg;
 
 use uniseg::UnicodeSegmentation as UniSeg;
@@ -238,6 +239,82 @@ impl<'a> StrCursor<'a> {
     }
 
     /**
+    Returns both the previous grapheme cluster and the cursor having seeked before it.
+
+    This may be more efficient than doing both operations individually.
+    */
+    #[inline]
+    pub fn prev(mut self) -> Option<(&'a str, StrCursor<'a>)> {
+        unsafe {
+            let g = match self.before() {
+                Some(g) => g,
+                None => return None,
+            };
+            self.unsafe_set_at(g);
+            Some((g, self))
+        }
+    }
+
+    /**
+    Returns both the previous code point and the cursor having seeked before it.
+
+    This may be more efficient than doing both operations individually.
+
+    # Note
+
+    Where possible, you should prefer `prev`.
+    */
+    #[inline]
+    pub fn prev_cp(mut self) -> Option<(char, StrCursor<'a>)> {
+        unsafe {
+            let cp = match self.cp_before() {
+                Some(cp) => cp,
+                None => return None,
+            };
+            self.unsafe_seek_left(cp.len_utf8());
+            Some((cp, self))
+        }
+    }
+
+    /**
+    Returns both the next grapheme cluster and the cursor having seeked past it.
+
+    This may be more efficient than doing both operations individually.
+    */
+    #[inline]
+    pub fn next(mut self) -> Option<(&'a str, StrCursor<'a>)> {
+        unsafe {
+            let g = match self.after() {
+                Some(g) => g,
+                None => return None,
+            };
+            self.unsafe_seek_right(g.len());
+            Some((g, self))
+        }
+    }
+
+    /**
+    Returns both the next code point and the cursor having seeked past it.
+
+    This may be more efficient than doing both operations individually.
+
+    # Note
+
+    Where possible, you should prefer `next`.
+    */
+    #[inline]
+    pub fn next_cp(mut self) -> Option<(char, StrCursor<'a>)> {
+        unsafe {
+            let cp = match self.cp_after() {
+                Some(cp) => cp,
+                None => return None,
+            };
+            self.unsafe_seek_right(cp.len_utf8());
+            Some((cp, self))
+        }
+    }
+
+    /**
     Returns the grapheme cluster immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
     */
     #[inline]
@@ -382,6 +459,21 @@ impl<'a> StrCursor<'a> {
             },
             None => false
         }
+    }
+
+    #[inline]
+    unsafe fn unsafe_seek_left(&mut self, bytes: usize) {
+        self.at = self.at.offset(-(bytes as isize));
+    }
+
+    #[inline]
+    unsafe fn unsafe_seek_right(&mut self, bytes: usize) {
+        self.at = self.at.offset(bytes as isize);
+    }
+
+    #[inline]
+    unsafe fn unsafe_set_at(&mut self, s: &'a str) {
+        self.at = s.as_bytes().as_ptr();
     }
 }
 
@@ -612,6 +704,136 @@ fn test_at_next_and_after() {
         (2, Some("e\u{0308}")),
         (5, Some("l")),
         (6, None),
+    ]);
+}
+
+#[cfg(test)]
+#[test]
+fn test_prev() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let cur = StrCursor::new_at_end(s);
+    let r = test_util::finite_iterate_lead(cur, StrCursor::at_prev)
+        .map(|cur| cur.prev().map(|(gr, cur)| (gr, cur.byte_pos())))
+        .collect::<Vec<_>>();
+    assert_eq!(r, vec![
+        Some(("!", 32)),
+        Some(("❤", 29)),
+        Some(("💪", 25)),
+        Some((",", 24)),
+        Some(("い", 21)),
+        Some(("嫌", 18)),
+        Some(("大", 15)),
+        Some((",", 14)),
+        Some(("r", 13)),
+        Some(("e", 12)),
+        Some(("g", 11)),
+        Some(("ä", 8)),
+        Some(("J", 7)),
+        Some((",", 6)),
+        Some(("r", 5)),
+        Some(("e", 4)),
+        Some(("g", 3)),
+        Some(("ä", 1)),
+        Some(("J", 0)),
+        None,
+    ]);
+}
+
+#[cfg(test)]
+#[test]
+fn test_prev_cp() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let cur = StrCursor::new_at_end(s);
+    let r = test_util::finite_iterate_lead(cur, StrCursor::at_prev_cp)
+        .map(|cur| cur.prev_cp().map(|(cp, cur)| (cp, cur.byte_pos())))
+        .collect::<Vec<_>>();
+    assert_eq!(r, vec![
+        Some(('!', 32)),
+        Some(('❤', 29)),
+        Some(('💪', 25)),
+        Some((',', 24)),
+        Some(('い', 21)),
+        Some(('嫌', 18)),
+        Some(('大', 15)),
+        Some((',', 14)),
+        Some(('r', 13)),
+        Some(('e', 12)),
+        Some(('g', 11)),
+        Some(('̈', 9)),
+        Some(('a', 8)),
+        Some(('J', 7)),
+        Some((',', 6)),
+        Some(('r', 5)),
+        Some(('e', 4)),
+        Some(('g', 3)),
+        Some(('ä', 1)),
+        Some(('J', 0)),
+        None,
+    ]);
+}
+
+#[cfg(test)]
+#[test]
+fn test_next() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let cur = StrCursor::new_at_start(s);
+    let r = test_util::finite_iterate_lead(cur, StrCursor::at_next)
+        .map(|cur| cur.next().map(|(gr, cur)| (gr, cur.byte_pos())))
+        .collect::<Vec<_>>();
+    assert_eq!(r, vec![
+        Some(("J", 1)),
+        Some(("ä", 3)),
+        Some(("g", 4)),
+        Some(("e", 5)),
+        Some(("r", 6)),
+        Some((",", 7)),
+        Some(("J", 8)),
+        Some(("ä", 11)),
+        Some(("g", 12)),
+        Some(("e", 13)),
+        Some(("r", 14)),
+        Some((",", 15)),
+        Some(("大", 18)),
+        Some(("嫌", 21)),
+        Some(("い", 24)),
+        Some((",", 25)),
+        Some(("💪", 29)),
+        Some(("❤", 32)),
+        Some(("!", 33)),
+        None,
+    ]);
+}
+
+#[cfg(test)]
+#[test]
+fn test_next_cp() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let cur = StrCursor::new_at_start(s);
+    let r = test_util::finite_iterate_lead(cur, StrCursor::at_next_cp)
+        .map(|cur| cur.next_cp().map(|(cp, cur)| (cp, cur.byte_pos())))
+        .collect::<Vec<_>>();
+    assert_eq!(r, vec![
+        Some(('J', 1)),
+        Some(('ä', 3)),
+        Some(('g', 4)),
+        Some(('e', 5)),
+        Some(('r', 6)),
+        Some((',', 7)),
+        Some(('J', 8)),
+        Some(('a', 9)),
+        Some(('̈', 11)),
+        Some(('g', 12)),
+        Some(('e', 13)),
+        Some(('r', 14)),
+        Some((',', 15)),
+        Some(('大', 18)),
+        Some(('嫌', 21)),
+        Some(('い', 24)),
+        Some((',', 25)),
+        Some(('💪', 29)),
+        Some(('❤', 32)),
+        Some(('!', 33)),
+        None,
     ]);
 }
 
