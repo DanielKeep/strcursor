@@ -311,6 +311,14 @@ impl<'a> StrCursor<'a> {
     }
 
     /**
+    Returns the entire string slice behind the cursor.
+    */
+    #[inline]
+    pub fn slice_all(&self) -> &'a str {
+        self.s
+    }
+
+    /**
     Returns the cursor's current position within the string as the number of UTF-8 code units from the beginning of the string.
     */
     #[inline]
