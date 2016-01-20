@@ -1,4 +1,6 @@
 #!/usr/bin/env python2
+# coding: utf-8
+
 # Copyright ⓒ 2015 Daniel Keep.
 #
 # Licensed under the MIT license (see LICENSE or <http://opensource.org
