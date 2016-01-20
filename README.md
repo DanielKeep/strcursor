@@ -4,9 +4,9 @@
 
 This crate provides a "cursor" type for string slices.  It provides the ability to safely seek back and forth through a string without worrying about producing invalid UTF-8 sequences, or splitting grapheme clusters.
 
-In addition, it provides types to represent single grapheme clusters ([`Gc`](struct.Gc.html) and [`GcBuf`](struct.GcBuf.html)) as distinct from arbitrary string slices.
+In addition, it provides types to represent single grapheme clusters (`Gc`) and `GcBuf`) as distinct from arbitrary string slices.
 
-See the [`StrCursor`](struct.StrCursor.html) type for details.
+See the `StrCursor` type for details.
 
 **Links**
 
