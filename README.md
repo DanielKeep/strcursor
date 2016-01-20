@@ -8,28 +8,11 @@ In addition, it provides types to represent single grapheme clusters ([`Gc`](str
 
 See the [`StrCursor`](struct.StrCursor.html) type for details.
 
-<style type="text/css">
-.link-block { font-family: "Fira Sans"; }
-.link-block > p { display: inline-block; }
-.link-block > p > strong { font-weight: 500; margin-right: 1em; }
-.link-block > ul { display: inline-block; padding: 0; list-style: none; }
-.link-block > ul > li {
-  font-size: 0.8em;
-  background-color: #eee;
-  border: 1px solid #ccc;
-  padding: 0.3em;
-  display: inline-block;
-}
-</style>
-<span></span><div class="link-block">
-
 **Links**
 
 * [Latest Release](https://crates.io/crates/strcursor/)
 * [Latest Docs](https://danielkeep.github.io/strcursor/doc/strcursor/index.html)
 * [Repository](https://github.com/DanielKeep/strcursor)
-
-<span></span></div>
 
 ## License
 
