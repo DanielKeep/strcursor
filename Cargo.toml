@@ -1,13 +1,13 @@
 [package]
 name = "strcursor"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Daniel Keep <daniel.keep@gmail.com>"]
 
 description = "Provides a string cursor type for seeking through a string whilst respecting grapheme cluster and code point boundaries."
 repository = "https://github.com/DanielKeep/strcursor"
 readme = "README.md"
 keywords = ["str", "string", "cursor", "grapheme", "unicode"]
-license = "MIT"
+license = "MIT/Apache-2.0"
 
 [dependencies]
 debug_unreachable = "0.0.6"
