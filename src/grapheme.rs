@@ -502,8 +502,18 @@ An owned, single Unicode grapheme cluster (akin to `String`).
 
 See [`Gc`](struct.Gc.html) for more details.
 */
+#[cfg(has_string_into_boxed_string)]
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GcBuf(Box<str>);
+
+/**
+An owned, single Unicode grapheme cluster (akin to `String`).
+
+See [`Gc`](struct.Gc.html) for more details.
+*/
+#[cfg(not(has_string_into_boxed_string))]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct GcBuf(String);
 
 impl GcBuf {
     /**
@@ -512,7 +522,7 @@ impl GcBuf {
     This function *does not* check to ensure the provided string is a single, valid grapheme cluster.
     */
     pub unsafe fn from_string_unchecked(s: String) -> GcBuf {
-        GcBuf(s.into_boxed_str())
+        GcBuf(s)
     }
 
     /**
@@ -605,21 +615,38 @@ impl From<char> for GcBuf {
     }
 }
 
+#[cfg(has_string_into_boxed_string)]
 impl Into<Box<str>> for GcBuf {
     fn into(self) -> Box<str> {
         self.0
     }
 }
 
+#[cfg(has_string_into_boxed_string)]
 impl Into<String> for GcBuf {
     fn into(self) -> String {
         self.0.into_string()
     }
 }
 
+#[cfg(has_string_into_boxed_string)]
 impl Into<Vec<u8>> for GcBuf {
     fn into(self) -> Vec<u8> {
         self.0.into_string().into()
+    }
+}
+
+#[cfg(not(has_string_into_boxed_string))]
+impl Into<String> for GcBuf {
+    fn into(self) -> String {
+        self.0
+    }
+}
+
+#[cfg(not(has_string_into_boxed_string))]
+impl Into<Vec<u8>> for GcBuf {
+    fn into(self) -> Vec<u8> {
+        self.0.into()
     }
 }
 
