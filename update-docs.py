@@ -1,7 +1,7 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # coding: utf-8
 
-# Copyright ⓒ 2015 Daniel Keep.
+# Copyright ⓒ 2016 Daniel Keep.
 #
 # Licensed under the MIT license (see LICENSE or <http://opensource.org
 # /licenses/MIT>) or the Apache License, Version 2.0 (see LICENSE of
@@ -112,7 +112,7 @@ def really_rmtree(path):
 def init_doc_branch():
     msg("Initialising %s branch" % DOC_TARGET_BRANCH)
 
-    dir = os.getcwdu()
+    dir = os.getcwd()
     msg_trace('dir = %r' % dir)
 
     tmp = tempfile.mkdtemp(prefix=TEMP_CHECKOUT_PREFIX)
@@ -153,7 +153,7 @@ def main():
     msg_trace('last_rev = %r' % last_rev)
     msg_trace('last_msg = %r' % last_msg)
 
-    dir = os.getcwdu()
+    dir = os.getcwd()
     msg_trace('dir = %r' % dir)
 
     tmp1 = tempfile.mkdtemp(prefix=TEMP_CHECKOUT_PREFIX)
@@ -170,7 +170,7 @@ def main():
 
         msg("Generating documentation...")
         args = '%s --features="%s"' % (DOC_ARGS, DOC_FEATURES)
-        sh('cargo doc %s' % DOC_ARGS)
+        sh('cargo doc %s' % args)
         tmp1_target_doc = '%s/target/doc' % tmp1
         msg_trace('shutil.move(%r, %r)' % (tmp1_target_doc, tmp2))
         shutil.move(tmp1_target_doc, tmp2)
@@ -198,7 +198,10 @@ def main():
         msg_trace('shutil.rmtree(%r)' % tmp1)
         really_rmtree(tmp1)
 
-    msg('Done.  Use `git push origin %s` to update live documentation.' % DOC_TARGET_BRANCH)
+    msg('Publishing...')
+    sh('git push -f origin "%s"' % DOC_TARGET_BRANCH)
+
+    msg('Done.')
 
 
 if __name__ == '__main__':
