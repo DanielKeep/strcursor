@@ -36,6 +36,15 @@ See the [`StrCursor`](struct.StrCursor.html) type for details.
 * [Repository](https://github.com/DanielKeep/strcursor)
 
 <span></span></div>
+
+## Compatibility
+
+`strcursor` is currently supported on `rustc` version 1.1.0 and higher.
+
+* `rustc` < 1.4 will use a larger, less space-efficient implementation of `GcBuf`; rather than being the same size as `Box<str>`, it will be the same size as `String`.
+
+* `rustc` < 1.1 is not supported, due to a mysterious compiler crash.
+
 */
 #[macro_use] extern crate debug_unreachable;
 extern crate unicode_segmentation as uniseg;
