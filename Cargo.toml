@@ -15,7 +15,6 @@ exclude = [
 ]
 
 [dependencies]
-debug_unreachable = "0.0.6"
 unicode-segmentation = "0.1.0"
 
 [build-dependencies]
