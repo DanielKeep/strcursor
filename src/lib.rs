@@ -1,51 +1,49 @@
-/*
-Copyright ⓒ 2015, 2016 Daniel Keep.
-
-Licensed under the MIT license (see LICENSE or <http://opensource.org
-/licenses/MIT>) or the Apache License, Version 2.0 (see LICENSE of
-<http://www.apache.org/licenses/LICENSE-2.0>), at your option. All
-files in the project carrying such notice may not be copied, modified,
-or distributed except according to those terms.
-*/
-/*!
-This crate provides a "cursor" type for string slices.  It provides the ability to safely seek back and forth through a string without worrying about producing invalid UTF-8 sequences, or splitting grapheme clusters.
-
-In addition, it provides types to represent single grapheme clusters ([`Gc`](struct.Gc.html) and [`GcBuf`](struct.GcBuf.html)) as distinct from arbitrary string slices.
-
-See the [`StrCursor`](struct.StrCursor.html) type for details.
-
-<style type="text/css">
-.link-block { font-family: "Fira Sans"; }
-.link-block > p { display: inline-block; }
-.link-block > p > strong { font-weight: 500; margin-right: 1em; }
-.link-block > ul { display: inline-block; padding: 0; list-style: none; }
-.link-block > ul > li {
-  font-size: 0.8em;
-  background-color: #eee;
-  border: 1px solid #ccc;
-  padding: 0.3em;
-  display: inline-block;
-}
-</style>
-<span></span><div class="link-block">
-
-**Links**
-
-* [Latest Release](https://crates.io/crates/strcursor/)
-* [Latest Docs](https://danielkeep.github.io/strcursor/doc/strcursor/index.html)
-* [Repository](https://github.com/DanielKeep/strcursor)
-
-<span></span></div>
-
-## Compatibility
-
-`strcursor` is currently supported on `rustc` version 1.1.0 and higher.
-
-* `rustc` < 1.4 will use a larger, less space-efficient implementation of `GcBuf`; rather than being the same size as `Box<str>`, it will be the same size as `String`.
-
-* `rustc` < 1.1 is not supported, due to a mysterious compiler crash.
-
-*/
+// Copyright ⓒ 2015, 2016 Daniel Keep.
+//
+// Licensed under the MIT license (see LICENSE or <http://opensource.org
+// /licenses/MIT>) or the Apache License, Version 2.0 (see LICENSE of
+// <http://www.apache.org/licenses/LICENSE-2.0>), at your option. All
+// files in the project carrying such notice may not be copied, modified,
+// or distributed except according to those terms.
+//
+//! This crate provides a "cursor" type for string slices.  It provides the ability to safely seek back and forth through a string without worrying about producing invalid UTF-8 sequences, or splitting grapheme clusters.
+//!
+//! In addition, it provides types to represent single grapheme clusters ([`Gc`](struct.Gc.html) and [`GcBuf`](struct.GcBuf.html)) as distinct from arbitrary string slices.
+//!
+//! See the [`StrCursor`](struct.StrCursor.html) type for details.
+//!
+//! <style type="text/css">
+//! .link-block { font-family: "Fira Sans"; }
+//! .link-block > p { display: inline-block; }
+//! .link-block > p > strong { font-weight: 500; margin-right: 1em; }
+//! .link-block > ul { display: inline-block; padding: 0; list-style: none; }
+//! .link-block > ul > li {
+//! font-size: 0.8em;
+//! background-color: #eee;
+//! border: 1px solid #ccc;
+//! padding: 0.3em;
+//! display: inline-block;
+//! }
+//! </style>
+//! <span></span><div class="link-block">
+//!
+//! Links**
+//!
+//! [Latest Release](https://crates.io/crates/strcursor/)
+//! [Latest Docs](https://danielkeep.github.io/strcursor/doc/strcursor/index.html)
+//! [Repository](https://github.com/DanielKeep/strcursor)
+//!
+//! <span></span></div>
+//!
+//! ## Compatibility
+//!
+//! `strcursor` is currently supported on `rustc` version 1.1.0 and higher.
+//!
+//! `rustc` < 1.4 will use a larger, less space-efficient implementation of `GcBuf`; rather than being the same size as `Box<str>`, it will be the same size as `String`.
+//!
+//! `rustc` < 1.1 is not supported, due to a mysterious compiler crash.
+//!
+//!
 extern crate unicode_segmentation as uniseg;
 
 /**
@@ -131,7 +129,7 @@ impl<'a> StrCursor<'a> {
 
         let prev = match prev {
             None => return cur, // We were already at the start.
-            Some(c) => c
+            Some(c) => c,
         };
 
         // unwrap should be OK here.
@@ -194,7 +192,7 @@ impl<'a> StrCursor<'a> {
     pub fn at_prev(mut self) -> Option<StrCursor<'a>> {
         match self.try_seek_left_gr() {
             true => Some(self),
-            false => None
+            false => None,
         }
     }
 
@@ -205,7 +203,7 @@ impl<'a> StrCursor<'a> {
     pub fn at_next(mut self) -> Option<StrCursor<'a>> {
         match self.try_seek_right_gr() {
             true => Some(self),
-            false => None
+            false => None,
         }
     }
 
@@ -220,7 +218,7 @@ impl<'a> StrCursor<'a> {
     pub fn at_prev_cp(mut self) -> Option<StrCursor<'a>> {
         match self.try_seek_left_cp() {
             true => Some(self),
-            false => None
+            false => None,
         }
     }
 
@@ -235,7 +233,7 @@ impl<'a> StrCursor<'a> {
     pub fn at_next_cp(mut self) -> Option<StrCursor<'a>> {
         match self.try_seek_right_cp() {
             true => Some(self),
-            false => None
+            false => None,
         }
     }
 
@@ -400,9 +398,7 @@ impl<'a> StrCursor<'a> {
     */
     #[inline]
     pub fn slice_before(&self) -> &'a str {
-        unsafe {
-            self.s.slice_unchecked(0, self.byte_pos())
-        }
+        unsafe { self.s.slice_unchecked(0, self.byte_pos()) }
     }
 
     /**
@@ -410,9 +406,7 @@ impl<'a> StrCursor<'a> {
     */
     #[inline]
     pub fn slice_after(&self) -> &'a str {
-        unsafe {
-            self.s.slice_unchecked(self.byte_pos(), self.s.len())
-        }
+        unsafe { self.s.slice_unchecked(self.byte_pos(), self.s.len()) }
     }
 
     /**
@@ -495,7 +489,10 @@ impl<'a> StrCursor<'a> {
     #[inline]
     fn try_seek_left_gr(&mut self) -> bool {
         let len = {
-            let gr = UniSeg::graphemes(self.slice_before(), /*is_extended:*/true).next_back();
+            let gr = UniSeg::graphemes(self.slice_before(),
+                                       // is_extended:
+                                       true)
+                         .next_back();
             gr.map(|gr| gr.len())
         };
         match len {
@@ -504,15 +501,18 @@ impl<'a> StrCursor<'a> {
                     self.at = self.at.offset(-(len as isize));
                 }
                 true
-            },
-            None => false
+            }
+            None => false,
         }
     }
 
     #[inline]
     fn try_seek_right_gr(&mut self) -> bool {
         let len = {
-            let gr = UniSeg::graphemes(self.slice_after(), /*is_extended:*/true).next();
+            let gr = UniSeg::graphemes(self.slice_after(),
+                                       // is_extended:
+                                       true)
+                         .next();
             gr.map(|gr| gr.len())
         };
         match len {
@@ -521,8 +521,8 @@ impl<'a> StrCursor<'a> {
                     self.at = self.at.offset(len as isize);
                 }
                 true
-            },
-            None => false
+            }
+            None => false,
         }
     }
 
@@ -560,8 +560,11 @@ impl<'a> Clone for StrCursor<'a> {
 }
 
 impl<'a> std::fmt::Debug for StrCursor<'a> {
-	fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(fmt, "StrCursor({:?} | {:?})", self.slice_before(), self.slice_after())
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(fmt,
+               "StrCursor({:?} | {:?})",
+               self.slice_before(),
+               self.slice_after())
     }
 }
 
@@ -569,15 +572,13 @@ impl<'a> Eq for StrCursor<'a> {}
 
 impl<'a> PartialEq for StrCursor<'a> {
     fn eq(&self, other: &StrCursor<'a>) -> bool {
-        (self.at == other.at)
-        && (self.s.as_ptr() == other.s.as_ptr())
-        && (self.s.len() == other.s.len())
+        (self.at == other.at) && (self.s.as_ptr() == other.s.as_ptr()) &&
+        (self.s.len() == other.s.len())
     }
 
     fn ne(&self, other: &StrCursor<'a>) -> bool {
-        (self.at != other.at)
-        || (self.s.as_ptr() != other.s.as_ptr())
-        || (self.s.len() != other.s.len())
+        (self.at != other.at) || (self.s.as_ptr() != other.s.as_ptr()) ||
+        (self.s.len() != other.s.len())
     }
 }
 
@@ -594,7 +595,8 @@ impl<'a> PartialOrd for StrCursor<'a> {
 
 impl<'a> std::hash::Hash for StrCursor<'a> {
     fn hash<H>(&self, state: &mut H)
-    where H: std::hash::Hasher {
+        where H: std::hash::Hasher
+    {
         self.s.as_ptr().hash(state);
         self.s.len().hash(state);
         self.at.hash(state);
@@ -639,10 +641,12 @@ fn test_new_at_cp_right_of_byte_pos() {
 #[test]
 fn test_new_at_left_of_byte_pos() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
-    let r = (0..s.len()+1).map(|i| (i, StrCursor::new_at_left_of_byte_pos(s, i)))
-        .map(|(i, cur)| (i, cur.byte_pos(), cur.after().map(Gc::as_str)))
-        .collect::<Vec<_>>();
-    assert_eq!(r, vec![
+    let r = (0..s.len() + 1)
+                .map(|i| (i, StrCursor::new_at_left_of_byte_pos(s, i)))
+                .map(|(i, cur)| (i, cur.byte_pos(), cur.after().map(Gc::as_str)))
+                .collect::<Vec<_>>();
+    assert_eq!(r,
+               vec![
         (0, 0, Some("J")),
         (1, 1, Some("ä")),
         (2, 1, Some("ä")),
@@ -684,10 +688,12 @@ fn test_new_at_left_of_byte_pos() {
 #[test]
 fn test_new_at_right_of_byte_pos() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
-    let r = (0..s.len()+1).map(|i| (i, StrCursor::new_at_right_of_byte_pos(s, i)))
-        .map(|(i, cur)| (i, cur.byte_pos(), cur.after().map(Gc::as_str)))
-        .collect::<Vec<_>>();
-    assert_eq!(r, vec![
+    let r = (0..s.len() + 1)
+                .map(|i| (i, StrCursor::new_at_right_of_byte_pos(s, i)))
+                .map(|(i, cur)| (i, cur.byte_pos(), cur.after().map(Gc::as_str)))
+                .collect::<Vec<_>>();
+    assert_eq!(r,
+               vec![
         (0, 0, Some("J")),
         (1, 1, Some("ä")),
         (2, 3, Some("g")),
@@ -731,8 +737,8 @@ fn test_at_prev_cp() {
     let s = "大嫌い,💪❤";
     let cur = StrCursor::new_at_end(s);
     let bps = test_util::finite_iterate(cur, StrCursor::at_prev_cp)
-        .map(|cur| cur.byte_pos())
-        .collect::<Vec<_>>();
+                  .map(|cur| cur.byte_pos())
+                  .collect::<Vec<_>>();
     assert_eq!(bps, vec![14, 10, 9, 6, 3, 0]);
 }
 
@@ -742,8 +748,8 @@ fn test_at_next_cp() {
     let s = "大嫌い,💪❤";
     let cur = StrCursor::new_at_start(s);
     let bps = test_util::finite_iterate(cur, StrCursor::at_next_cp)
-        .map(|cur| cur.byte_pos())
-        .collect::<Vec<_>>();
+                  .map(|cur| cur.byte_pos())
+                  .collect::<Vec<_>>();
     assert_eq!(bps, vec![3, 6, 9, 10, 14, 17]);
 }
 
@@ -753,9 +759,10 @@ fn test_at_prev_and_before() {
     let s = "noe\u{0308}l";
     let cur = StrCursor::new_at_end(s);
     let bps = test_util::finite_iterate_lead(cur, StrCursor::at_prev)
-        .map(|cur| (cur.byte_pos(), cur.after().map(Gc::as_str)))
-        .collect::<Vec<_>>();
-    assert_eq!(bps, vec![
+                  .map(|cur| (cur.byte_pos(), cur.after().map(Gc::as_str)))
+                  .collect::<Vec<_>>();
+    assert_eq!(bps,
+               vec![
         (6, None),
         (5, Some("l")),
         (2, Some("e\u{0308}")),
@@ -770,9 +777,10 @@ fn test_at_next_and_after() {
     let s = "noe\u{0308}l";
     let cur = StrCursor::new_at_start(s);
     let bps = test_util::finite_iterate_lead(cur, StrCursor::at_next)
-        .map(|cur| (cur.byte_pos(), cur.after().map(Gc::as_str)))
-        .collect::<Vec<_>>();
-    assert_eq!(bps, vec![
+                  .map(|cur| (cur.byte_pos(), cur.after().map(Gc::as_str)))
+                  .collect::<Vec<_>>();
+    assert_eq!(bps,
+               vec![
         (0, Some("n")),
         (1, Some("o")),
         (2, Some("e\u{0308}")),
@@ -787,9 +795,10 @@ fn test_prev() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
     let cur = StrCursor::new_at_end(s);
     let r = test_util::finite_iterate_lead(cur, StrCursor::at_prev)
-        .map(|cur| cur.prev().map(|(gr, cur)| (gr.as_str(), cur.byte_pos())))
-        .collect::<Vec<_>>();
-    assert_eq!(r, vec![
+                .map(|cur| cur.prev().map(|(gr, cur)| (gr.as_str(), cur.byte_pos())))
+                .collect::<Vec<_>>();
+    assert_eq!(r,
+               vec![
         Some(("!", 32)),
         Some(("❤", 29)),
         Some(("💪", 25)),
@@ -819,9 +828,10 @@ fn test_prev_cp() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
     let cur = StrCursor::new_at_end(s);
     let r = test_util::finite_iterate_lead(cur, StrCursor::at_prev_cp)
-        .map(|cur| cur.prev_cp().map(|(cp, cur)| (cp, cur.byte_pos())))
-        .collect::<Vec<_>>();
-    assert_eq!(r, vec![
+                .map(|cur| cur.prev_cp().map(|(cp, cur)| (cp, cur.byte_pos())))
+                .collect::<Vec<_>>();
+    assert_eq!(r,
+               vec![
         Some(('!', 32)),
         Some(('❤', 29)),
         Some(('💪', 25)),
@@ -852,9 +862,10 @@ fn test_next() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
     let cur = StrCursor::new_at_start(s);
     let r = test_util::finite_iterate_lead(cur, StrCursor::at_next)
-        .map(|cur| cur.next().map(|(gr, cur)| (gr.as_str(), cur.byte_pos())))
-        .collect::<Vec<_>>();
-    assert_eq!(r, vec![
+                .map(|cur| cur.next().map(|(gr, cur)| (gr.as_str(), cur.byte_pos())))
+                .collect::<Vec<_>>();
+    assert_eq!(r,
+               vec![
         Some(("J", 1)),
         Some(("ä", 3)),
         Some(("g", 4)),
@@ -884,9 +895,10 @@ fn test_next_cp() {
     let s = "Jäger,Jäger,大嫌い,💪❤!";
     let cur = StrCursor::new_at_start(s);
     let r = test_util::finite_iterate_lead(cur, StrCursor::at_next_cp)
-        .map(|cur| cur.next_cp().map(|(cp, cur)| (cp, cur.byte_pos())))
-        .collect::<Vec<_>>();
-    assert_eq!(r, vec![
+                .map(|cur| cur.next_cp().map(|(cp, cur)| (cp, cur.byte_pos())))
+                .collect::<Vec<_>>();
+    assert_eq!(r,
+               vec![
         Some(('J', 1)),
         Some(('ä', 3)),
         Some(('g', 4)),
@@ -917,17 +929,16 @@ fn test_char_before_and_after() {
     let s = "大嫌い,💪❤";
     let cur = StrCursor::new_at_start(s);
     let r = test_util::finite_iterate_lead(cur, StrCursor::at_next_cp)
-        .map(|cur| (cur.byte_pos(), cur.cp_before(), cur.cp_after()))
-        .collect::<Vec<_>>();
-    assert_eq!(r, vec![
-        (0, None, Some('大')),
-        (3, Some('大'), Some('嫌')),
-        (6, Some('嫌'), Some('い')),
-        (9, Some('い'), Some(',')),
-        (10, Some(','), Some('💪')),
-        (14, Some('💪'), Some('❤')),
-        (17, Some('❤'), None)
-    ]);
+                .map(|cur| (cur.byte_pos(), cur.cp_before(), cur.cp_after()))
+                .collect::<Vec<_>>();
+    assert_eq!(r,
+               vec![(0, None, Some('大')),
+                    (3, Some('大'), Some('嫌')),
+                    (6, Some('嫌'), Some('い')),
+                    (9, Some('い'), Some(',')),
+                    (10, Some(','), Some('💪')),
+                    (14, Some('💪'), Some('❤')),
+                    (17, Some('❤'), None)]);
 }
 
 #[cfg(test)]
@@ -948,7 +959,8 @@ fn test_slice_between() {
 fn byte_pos_to_ptr(s: &str, byte_pos: usize) -> *const u8 {
     if s.len() < byte_pos {
         panic!("byte position out of bounds: the len is {} but the position is {}",
-            s.len(), byte_pos);
+               s.len(),
+               byte_pos);
     }
     unsafe { s.as_ptr().offset(byte_pos as isize) }
 }
@@ -999,8 +1011,7 @@ fn test_seek_utf8_cp_start_right() {
 
 #[inline]
 fn str_eq_literal(a: &str, b: &str) -> bool {
-    a.as_bytes().as_ptr() == b.as_bytes().as_ptr()
-        && a.len() == b.len()
+    a.as_bytes().as_ptr() == b.as_bytes().as_ptr() && a.len() == b.len()
 }
 
 #[cfg(test)]
@@ -1018,10 +1029,9 @@ mod test_util {
     pub struct FiniteIter<T, F>(Option<T>, F);
 
     impl<T, F> Iterator for FiniteIter<T, F>
-    where
-        F: FnMut(T) -> Option<T>,
-        T: Clone,
-    {
+        where F: FnMut(T) -> Option<T>,
+              T: Clone
+{
         type Item = T;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -1030,27 +1040,25 @@ mod test_util {
                     Some(e) => {
                         self.0 = Some(e);
                         self.0.clone()
-                    },
-                    None => None
+                    }
+                    None => None,
                 }
             })
         }
     }
 
     pub fn finite_iterate<T, F>(seed: T, f: F) -> FiniteIter<T, F>
-    where
-        F: FnMut(T) -> Option<T>,
-        T: Clone,
+        where F: FnMut(T) -> Option<T>,
+              T: Clone
     {
         FiniteIter(Some(seed), f)
     }
     pub struct FiniteIterLead<T, F>(Option<T>, F, bool);
 
     impl<T, F> Iterator for FiniteIterLead<T, F>
-    where
-        F: FnMut(T) -> Option<T>,
-        T: Clone,
-    {
+        where F: FnMut(T) -> Option<T>,
+              T: Clone
+{
         type Item = T;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -1064,17 +1072,16 @@ mod test_util {
                     Some(e) => {
                         self.0 = Some(e);
                         self.0.clone()
-                    },
-                    None => None
+                    }
+                    None => None,
                 }
             })
         }
     }
 
     pub fn finite_iterate_lead<T, F>(seed: T, f: F) -> FiniteIterLead<T, F>
-    where
-        F: FnMut(T) -> Option<T>,
-        T: Clone,
+        where F: FnMut(T) -> Option<T>,
+              T: Clone
     {
         FiniteIterLead(Some(seed), f, false)
     }

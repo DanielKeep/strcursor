@@ -1,15 +1,13 @@
-/*
-Copyright ⓒ 2015, 2016 Daniel Keep.
-
-Licensed under the MIT license (see LICENSE or <http://opensource.org
-/licenses/MIT>) or the Apache License, Version 2.0 (see LICENSE of
-<http://www.apache.org/licenses/LICENSE-2.0>), at your option. All
-files in the project carrying such notice may not be copied, modified,
-or distributed except according to those terms.
-*/
-/*!
-Defines types for representing single grapheme clusters.
-*/
+// Copyright ⓒ 2015, 2016 Daniel Keep.
+//
+// Licensed under the MIT license (see LICENSE or <http://opensource.org
+// /licenses/MIT>) or the Apache License, Version 2.0 (see LICENSE of
+// <http://www.apache.org/licenses/LICENSE-2.0>), at your option. All
+// files in the project carrying such notice may not be copied, modified,
+// or distributed except according to those terms.
+//
+//! Defines types for representing single grapheme clusters.
+//!
 use std::borrow::{Borrow, Cow, ToOwned};
 use std::convert::AsRef;
 use std::cmp::Ordering;
@@ -21,12 +19,16 @@ use uniseg::UnicodeSegmentation as UniSeg;
 /**
 An iterator over the lower case mapping of a given grapheme cluster, returned from [`Gc::to_lowercase`](struct.Gc.html#method.to_lowercase).
 */
-pub type ToLowercase<'a> = ::std::iter::FlatMap<::std::str::Chars<'a>, ::std::char::ToLowercase, fn(char) -> ::std::char::ToLowercase>;
+pub type ToLowercase<'a> = ::std::iter::FlatMap<::std::str::Chars<'a>,
+                                                  ::std::char::ToLowercase,
+                                                  fn(char) -> ::std::char::ToLowercase>;
 
 /**
 An iterator over the lower case mapping of a given grapheme cluster, returned from [`Gc::to_uppercase`](struct.Gc.html#method.to_uppercase).
 */
-pub type ToUppercase<'a> = ::std::iter::FlatMap<::std::str::Chars<'a>, ::std::char::ToUppercase, fn(char) -> ::std::char::ToUppercase>;
+pub type ToUppercase<'a> = ::std::iter::FlatMap<::std::str::Chars<'a>,
+                                                  ::std::char::ToUppercase,
+                                                  fn(char) -> ::std::char::ToUppercase>;
 
 /**
 A slice of a single Unicode grapheme cluster (GC) (akin to `str`).
@@ -58,8 +60,14 @@ impl Gc {
     */
     pub fn from_str(s: &str) -> Option<&Gc> {
         match Gc::split_from(s) {
-            Some((gc, tail)) => if tail.len() == 0 { Some(gc) } else { None },
-            None => None
+            Some((gc, tail)) => {
+                if tail.len() == 0 {
+                    Some(gc)
+                } else {
+                    None
+                }
+            }
+            None => None,
         }
     }
 
@@ -79,7 +87,10 @@ impl Gc {
     */
     pub fn split_from(s: &str) -> Option<(&Gc, &str)> {
         unsafe {
-            let gr = match UniSeg::graphemes(s, /*is_extended:*/true).next() {
+            let gr = match UniSeg::graphemes(s,
+                                             // is_extended:
+                                             true)
+                               .next() {
                 Some(gr) => gr,
                 None => return None,
             };
@@ -368,7 +379,7 @@ impl PartialOrd<char> for Gc {
         } else {
             match self.base_char().partial_cmp(other) {
                 Some(Ordering::Equal) => Some(Ordering::Less),
-                other => other
+                other => other,
             }
         }
     }
@@ -491,9 +502,7 @@ impl<'a> PartialOrd<&'a Gc> for Cow<'a, Gc> {
 impl ToOwned for Gc {
     type Owned = GcBuf;
     fn to_owned(&self) -> Self::Owned {
-        unsafe {
-            GcBuf::from_string_unchecked(self.0.to_owned())
-        }
+        unsafe { GcBuf::from_string_unchecked(self.0.to_owned()) }
     }
 }
 
@@ -529,9 +538,7 @@ impl GcBuf {
     Returns a borrowed grapheme cluster slice.
     */
     pub fn as_gc(&self) -> &Gc {
-        unsafe {
-            Gc::from_str_unchecked(&self.0)
-        }
+        unsafe { Gc::from_str_unchecked(&self.0) }
     }
 }
 
@@ -567,9 +574,7 @@ impl Debug for GcBuf {
 
 impl Default for GcBuf {
     fn default() -> Self {
-        unsafe {
-            GcBuf::from_string_unchecked(String::from("\u{0}"))
-        }
+        unsafe { GcBuf::from_string_unchecked(String::from("\u{0}")) }
     }
 }
 
@@ -588,9 +593,7 @@ impl Display for GcBuf {
 
 impl<'a> From<&'a Gc> for GcBuf {
     fn from(v: &'a Gc) -> Self {
-        unsafe {
-            GcBuf::from_string_unchecked(v.as_str().to_owned())
-        }
+        unsafe { GcBuf::from_string_unchecked(v.as_str().to_owned()) }
     }
 }
 
@@ -605,7 +608,7 @@ impl From<char> for GcBuf {
                     } else {
                         debug_unreachable!();
                     }
-                },
+                }
                 None => debug_unreachable!(),
             };
             let s: &str = transmute(bs);
