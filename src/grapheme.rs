@@ -522,6 +522,16 @@ impl GcBuf {
     This function *does not* check to ensure the provided string is a single, valid grapheme cluster.
     */
     pub unsafe fn from_string_unchecked(s: String) -> GcBuf {
+        Self::from_string_unchecked_impl(s)
+    }
+
+    #[cfg(has_string_into_boxed_string)]
+    unsafe fn from_string_unchecked_impl(s: String) -> GcBuf {
+        GcBuf(s.into_boxed_str())
+    }
+
+    #[cfg(not(has_string_into_boxed_string))]
+    unsafe fn from_string_unchecked_impl(s: String) -> GcBuf {
         GcBuf(s)
     }
 
