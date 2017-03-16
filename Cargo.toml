@@ -17,7 +17,8 @@ exclude = [
 ]
 
 [dependencies]
-unicode-segmentation = "0.1.0"
+# 0.1.3 breaks semver
+unicode-segmentation = "0.1.0, <0.1.3"
 
 [build-dependencies]
 rustc_version = "0.1.4"
