@@ -72,12 +72,36 @@ The cursor guarantees the following at all times:
 This last point is somewhat important: the cursor is designed to favour operating on grapheme clusters, rather than code points.  If you misalign the cursor with respect to grapheme clusters, the behaviour of methods that deal with grapheme clusters is officially *undefined*, but is generally well-behaved.
 
 The methods that operate on the cursor will either return a fresh `Option<StrCursor>` (depending on whether the seek operation is valid or not), or mutate the existing cursor (in which case, they will *panic* if the seek operation is not valid).
+
+## Method Summary
+
+Variants that deal with code points are not explicitly mentioned here.  In general, all methods that involve grapheme clusters have a corresponding code point variant.
+
+- `new_at_…`: creates a cursor for a string at a given position.
+
+- `before`/`after`: returns grapheme cluster before/after the cursor.
+- `slice_before`/`slice_after`: returns contents of string before/after the cursor.
+- `slice_all`: returns entire backing string.
+- `slice_between`/`slice_until`: returns contents of string between (unordered/ordered) cursors.
+- `byte_pos`: byte position of the cursor.
+
+- `at_prev`/`at_next`: returns a derived, relatively positioned cursor.
+- `prev`/`next`: efficiently combines `before`/`after` and `at_prev`/`at_next`
+- `seek_prev`/`seek_next`: repositions a cursor in-place, panicking on out-of-bounds movement.
+
+There are also some unsafe methods for performance-critical cases.  Note that these methods *do not* check their arguments for validity, and if misused can violate Rust's safety guarantees.
+
+- `unsafe_seek_…`: seeks a given number of bytes left/right.
+- `unsafe_set_at`: sets the cursor position directly.
 */
 pub struct StrCursor<'a> {
     s: &'a str,
     at: *const u8,
 }
 
+/**
+Cursor creation.
+*/
 impl<'a> StrCursor<'a> {
     /**
     Create a new cursor at the start of `s`.
@@ -169,7 +193,134 @@ impl<'a> StrCursor<'a> {
             at: unsafe { seek_utf8_cp_start_right(s, byte_pos_to_ptr(s, byte_pos)) },
         }
     }
+}
 
+/**
+Cursor inspection.
+*/
+impl<'a> StrCursor<'a> {
+    /**
+    Returns the grapheme cluster immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
+    */
+    #[inline]
+    pub fn before(&self) -> Option<&'a Gc> {
+        self.at_prev().and_then(|cur| cur.after())
+    }
+
+    /**
+    Returns the grapheme cluster immediately to the right of the cursor, or `None` is the cursor is at the end of the string.
+    */
+    #[inline]
+    pub fn after(&self) -> Option<&'a Gc> {
+        Gc::split_from(self.slice_after()).map(|(gc, _)| gc)
+    }
+
+    /**
+    Returns the code point immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
+    */
+    #[inline]
+    pub fn cp_before(&self) -> Option<char> {
+        self.at_prev_cp().and_then(|cur| cur.cp_after())
+    }
+
+    /**
+    Returns the code point immediately to the right of the cursor, or `None` is the cursor is at the end of the string.
+    */
+    #[inline]
+    pub fn cp_after(&self) -> Option<char> {
+        self.slice_after().chars().next()
+    }
+
+    /**
+    Returns the contents of the string to the left of the cursor.
+    */
+    #[inline]
+    pub fn slice_before(&self) -> &'a str {
+        unsafe {
+            self.s.slice_unchecked(0, self.byte_pos())
+        }
+    }
+
+    /**
+    Returns the contents of the string to the right of the cursor.
+    */
+    #[inline]
+    pub fn slice_after(&self) -> &'a str {
+        unsafe {
+            self.s.slice_unchecked(self.byte_pos(), self.s.len())
+        }
+    }
+
+    /**
+    Returns the entire string slice behind the cursor.
+    */
+    #[inline]
+    pub fn slice_all(&self) -> &'a str {
+        self.s
+    }
+
+    /**
+    Returns the contents of the string *between* this cursor and another cursor.
+
+    The order of the cursors does not matter; `a.slice_between(b)` and `b.slice_between(a)` produce the same results.
+
+    Returns `None` if the cursors are from different strings (even different subsets of the same string).
+    */
+    #[inline]
+    pub fn slice_between(&self, other: StrCursor<'a>) -> Option<&'a str> {
+        if !str_eq_literal(self.s, other.s) {
+            None
+        } else {
+            use std::cmp::{max, min};
+            unsafe {
+                let beg = min(self.at, other.at);
+                let end = max(self.at, other.at);
+                let len = end as usize - beg as usize;
+                let bytes = ::std::slice::from_raw_parts(beg, len);
+                Some(::std::str::from_utf8_unchecked(bytes))
+            }
+        }
+    }
+
+    /**
+    Returns the contents of the string *starting* at this cursor, ending at another.
+
+    The order of the cursors matters; if `b` points to a position *before* `a` within the same string, `a.slice_until(b)` will result in an empty string slice.
+
+    Returns `None` if the cursors are from different strings (even different subsets of the same string).
+    */
+    #[inline]
+    pub fn slice_until(&self, end: StrCursor<'a>) -> Option<&'a str> {
+        if !str_eq_literal(self.s, end.s) {
+            None
+        } else {
+            unsafe {
+                let beg = self.at;
+                let end = end.at;
+                let len = if end >= beg {
+                    end as usize - beg as usize
+                } else {
+                    0
+                };
+                let bytes = ::std::slice::from_raw_parts(beg, len);
+                Some(::std::str::from_utf8_unchecked(bytes))
+            }
+        }
+    }
+
+    /**
+    Returns the cursor's current position within the string as the number of UTF-8 code units from the beginning of the string.
+    */
+    #[inline]
+    pub fn byte_pos(&self) -> usize {
+        self.at as usize - self.s.as_ptr() as usize
+    }
+}
+
+/**
+Cursor movement.
+*/
+impl<'a> StrCursor<'a> {
     /**
     Returns a new cursor at the beginning of the previous grapheme cluster, or `None` if the cursor is currently positioned at the beginning of the string.
     */
@@ -219,70 +370,6 @@ impl<'a> StrCursor<'a> {
         match self.try_seek_right_cp() {
             true => Some(self),
             false => None
-        }
-    }
-
-    /**
-    Seeks the cursor to the beginning of the previous grapheme cluster.
-
-    # Panics
-
-    If the cursor is currently at the start of the string, then this function will panic.
-    */
-    #[inline]
-    pub fn seek_prev(&mut self) {
-        if !self.try_seek_right_gr() {
-            panic!("cannot seek past the beginning of a string");
-        }
-    }
-
-    /**
-    Seeks the cursor to the beginning of the next grapheme cluster.
-
-    # Panics
-
-    If the cursor is currently at the end of the string, then this function will panic.
-    */
-    #[inline]
-    pub fn seek_next(&mut self) {
-        if !self.try_seek_right_gr() {
-            panic!("cannot seek past the end of a string");
-        }
-    }
-
-    /**
-    Seeks the cursor to the beginning of the previous code point.
-
-    # Panics
-
-    If the cursor is currently at the start of the string, then this function will panic.
-
-    # Note
-
-    Where possible, you should prefer `seek_prev`.
-    */
-    #[inline]
-    pub fn seek_prev_cp(&mut self) {
-        if !self.try_seek_left_cp() {
-            panic!("cannot seek past the beginning of a string");
-        }
-    }
-
-    /**
-    Seeks the cursor to the beginning of the next code point.
-
-    # Panics
-
-    If the cursor is currently at the end of the string, then this function will panic.
-
-    # Note
-
-    Where possible, you should prefer `seek_next`.
-    */
-    #[inline]
-    pub fn seek_next_cp(&mut self) {
-        if !self.try_seek_right_cp() {
-            panic!("cannot seek past the end of a string");
         }
     }
 
@@ -363,122 +450,105 @@ impl<'a> StrCursor<'a> {
     }
 
     /**
-    Returns the grapheme cluster immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
-    */
-    #[inline]
-    pub fn before(&self) -> Option<&'a Gc> {
-        self.at_prev().and_then(|cur| cur.after())
-    }
+    Seeks the cursor to the beginning of the previous grapheme cluster.
 
-    /**
-    Returns the grapheme cluster immediately to the right of the cursor, or `None` is the cursor is at the end of the string.
-    */
-    #[inline]
-    pub fn after(&self) -> Option<&'a Gc> {
-        Gc::split_from(self.slice_after()).map(|(gc, _)| gc)
-    }
+    # Panics
 
-    /**
-    Returns the contents of the string to the left of the cursor.
+    If the cursor is currently at the start of the string, then this function will panic.
     */
     #[inline]
-    pub fn slice_before(&self) -> &'a str {
-        unsafe {
-            self.s.slice_unchecked(0, self.byte_pos())
+    pub fn seek_prev(&mut self) {
+        if !self.try_seek_right_gr() {
+            panic!("cannot seek past the beginning of a string");
         }
     }
 
     /**
-    Returns the contents of the string to the right of the cursor.
+    Seeks the cursor to the beginning of the next grapheme cluster.
+
+    # Panics
+
+    If the cursor is currently at the end of the string, then this function will panic.
     */
     #[inline]
-    pub fn slice_after(&self) -> &'a str {
-        unsafe {
-            self.s.slice_unchecked(self.byte_pos(), self.s.len())
+    pub fn seek_next(&mut self) {
+        if !self.try_seek_right_gr() {
+            panic!("cannot seek past the end of a string");
         }
     }
 
     /**
-    Returns the contents of the string *between* this cursor and another cursor.
+    Seeks the cursor to the beginning of the previous code point.
 
-    The order of the cursors does not matter; `a.slice_between(b)` and `b.slice_between(a)` produce the same results.
+    # Panics
 
-    Returns `None` if the cursors are from different strings (even different subsets of the same string).
+    If the cursor is currently at the start of the string, then this function will panic.
+
+    # Note
+
+    Where possible, you should prefer `seek_prev`.
     */
     #[inline]
-    pub fn slice_between(&self, other: StrCursor<'a>) -> Option<&'a str> {
-        if !str_eq_literal(self.s, other.s) {
-            None
-        } else {
-            use std::cmp::{max, min};
-            unsafe {
-                let beg = min(self.at, other.at);
-                let end = max(self.at, other.at);
-                let len = end as usize - beg as usize;
-                let bytes = ::std::slice::from_raw_parts(beg, len);
-                Some(::std::str::from_utf8_unchecked(bytes))
-            }
+    pub fn seek_prev_cp(&mut self) {
+        if !self.try_seek_left_cp() {
+            panic!("cannot seek past the beginning of a string");
         }
     }
 
     /**
-    Returns the contents of the string *starting* at this cursor, ending at another.
+    Seeks the cursor to the beginning of the next code point.
 
-    The order of the cursors matters; if `b` points to a position *before* `a` within the same string, `a.slice_until(b)` will result in an empty string slice.
+    # Panics
 
-    Returns `None` if the cursors are from different strings (even different subsets of the same string).
+    If the cursor is currently at the end of the string, then this function will panic.
+
+    # Note
+
+    Where possible, you should prefer `seek_next`.
     */
     #[inline]
-    pub fn slice_until(&self, end: StrCursor<'a>) -> Option<&'a str> {
-        if !str_eq_literal(self.s, end.s) {
-            None
-        } else {
-            unsafe {
-                let beg = self.at;
-                let end = end.at;
-                let len = if end >= beg {
-                    end as usize - beg as usize
-                } else {
-                    0
-                };
-                let bytes = ::std::slice::from_raw_parts(beg, len);
-                Some(::std::str::from_utf8_unchecked(bytes))
-            }
+    pub fn seek_next_cp(&mut self) {
+        if !self.try_seek_right_cp() {
+            panic!("cannot seek past the end of a string");
         }
     }
+}
 
+/**
+Unsafe methods.
+
+These methods do not perform any validity checking, and as such should be used with extreme caution.
+*/
+impl<'a> StrCursor<'a> {
     /**
-    Returns the code point immediately to the left of the cursor, or `None` is the cursor is at the start of the string.
+    Seeks exactly `bytes` left, without performing any bounds or validity checks.
     */
     #[inline]
-    pub fn cp_before(&self) -> Option<char> {
-        self.at_prev_cp().and_then(|cur| cur.cp_after())
+    pub unsafe fn unsafe_seek_left(&mut self, bytes: usize) {
+        self.at = self.at.offset(-(bytes as isize));
     }
 
     /**
-    Returns the code point immediately to the right of the cursor, or `None` is the cursor is at the end of the string.
+    Seeks exactly `bytes` right, without performing any bounds or validity checks.
     */
     #[inline]
-    pub fn cp_after(&self) -> Option<char> {
-        self.slice_after().chars().next()
+    pub unsafe fn unsafe_seek_right(&mut self, bytes: usize) {
+        self.at = self.at.offset(bytes as isize);
     }
 
     /**
-    Returns the entire string slice behind the cursor.
+    Seeks to the start of `s`, without performing any bounds or validity checks.
     */
     #[inline]
-    pub fn slice_all(&self) -> &'a str {
-        self.s
+    pub unsafe fn unsafe_set_at(&mut self, s: &'a str) {
+        self.at = s.as_bytes().as_ptr();
     }
+}
 
-    /**
-    Returns the cursor's current position within the string as the number of UTF-8 code units from the beginning of the string.
-    */
-    #[inline]
-    pub fn byte_pos(&self) -> usize {
-        self.at as usize - self.s.as_ptr() as usize
-    }
-
+/**
+Internal methods.
+*/
+impl<'a> StrCursor<'a> {
     #[inline]
     fn try_seek_left_cp(&mut self) -> bool {
         unsafe {
@@ -535,30 +605,6 @@ impl<'a> StrCursor<'a> {
             },
             None => false
         }
-    }
-
-    /**
-    Seeks exactly `bytes` left, without performing any bounds or validity checks.
-    */
-    #[inline]
-    pub unsafe fn unsafe_seek_left(&mut self, bytes: usize) {
-        self.at = self.at.offset(-(bytes as isize));
-    }
-
-    /**
-    Seeks exactly `bytes` right, without performing any bounds or validity checks.
-    */
-    #[inline]
-    pub unsafe fn unsafe_seek_right(&mut self, bytes: usize) {
-        self.at = self.at.offset(bytes as isize);
-    }
-
-    /**
-    Seeks to the start of `s`, without performing any bounds or validity checks.
-    */
-    #[inline]
-    pub unsafe fn unsafe_set_at(&mut self, s: &'a str) {
-        self.at = s.as_bytes().as_ptr();
     }
 }
 
@@ -969,6 +1015,11 @@ fn test_slice_until() {
     assert_eq!(cur0.slice_until(cur3), None);
 }
 
+/**
+Turns a string, and a byte position within that string, into a raw pointer pointing to that byte position.
+
+This function performs bounds checking to ensure the pointer is valid.  However, if the byte position is equal to the length of the string (*i.e.* it points to the end of the string), the resulting pointer is within bounds, but *not* safe to dereference.
+*/
 #[inline]
 fn byte_pos_to_ptr(s: &str, byte_pos: usize) -> *const u8 {
     if s.len() < byte_pos {
@@ -978,6 +1029,13 @@ fn byte_pos_to_ptr(s: &str, byte_pos: usize) -> *const u8 {
     unsafe { s.as_ptr().offset(byte_pos as isize) }
 }
 
+/**
+Seeks the given pointer left to the first code point boundary.
+
+Assuming `from` is a pointer into `s`, and `s` is not empty, the resulting pointer will lie on a valid UTF-8 code point boundary.
+
+If `from` already points to a code point boundary, it is returned unchanged.
+*/
 #[inline]
 unsafe fn seek_utf8_cp_start_left(s: &str, mut from: *const u8) -> *const u8 {
     let beg = s.as_ptr();
@@ -1000,6 +1058,13 @@ fn test_seek_utf8_cp_start_left() {
     assert_eq!(unsafe { seek_utf8_cp_start_left(s, &b[5]) }, &b[3]);
 }
 
+/**
+Seeks the given pointer right to the first code point boundary.
+
+Assuming `from` is a pointer into `s`, and `s` is not empty, the resulting pointer will lie on a valid UTF-8 code point boundary.  Note that this *includes* the very end of the string, immediately after the last byte in the string.
+
+If `from` already points to a code point boundary, it is returned unchanged.
+*/
 #[inline]
 unsafe fn seek_utf8_cp_start_right(s: &str, mut from: *const u8) -> *const u8 {
     let end = s.as_ptr().offset(s.len() as isize);
@@ -1022,6 +1087,11 @@ fn test_seek_utf8_cp_start_right() {
     assert_eq!(unsafe { seek_utf8_cp_start_right(s, &b[5]) }, &b[6]);
 }
 
+/**
+Compares two strings for exact pointer identity.
+
+That is, this only returns `true` if the two strings point to the same location in memory, and are of the same length.
+*/
 #[inline]
 fn str_eq_literal(a: &str, b: &str) -> bool {
     a.as_bytes().as_ptr() == b.as_bytes().as_ptr()
