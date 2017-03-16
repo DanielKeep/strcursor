@@ -11,16 +11,6 @@ or distributed except according to those terms.
 Miscellaneous stuff.
 */
 
-#[inline(always)]
-pub unsafe fn unreachable() -> ! {
-    enum Knowledge {}
-    #[inline(always)]
-    fn nirvana(knowledge: Knowledge) -> ! {
-        match knowledge {}
-    }
-    nirvana(::std::mem::transmute(()))
-}
-
 /*
 
 TODO: The following code is nicked from libcore, owing to `encode_utf8` not being stable yet.  Specifically, <https://github.com/rust-lang/rust/blob/3d7cd77e442ce34eaac8a176ae8be17669498ebc/src/libcore/char.rs>.

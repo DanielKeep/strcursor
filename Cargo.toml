@@ -15,4 +15,5 @@ exclude = [
 ]
 
 [dependencies]
+debug_unreachable = "0.1.1"
 unicode-segmentation = "1.1.0"

@@ -44,23 +44,8 @@ See the [`StrCursor`](struct.StrCursor.html) type for details.
 `rustc` version 1.1+ is supported by `strcursor` version `0.1.*`.
 
 */
+#[macro_use] extern crate debug_unreachable;
 extern crate unicode_segmentation as uniseg;
-
-/**
-Inserts a panic in debug builds, an optimisation hint in release builds.
-
-**Do not replace this with the `debug_unreachable` crate.**  Recent versions of that crate do not build under Rust < 1.6, and old versions that used to no longer will, as they have sufficiently vague dependency version specifiers.
-*/
-#[doc(hidden)]
-macro_rules! debug_unreachable {
-    () => {
-        if cfg!(ndebug) {
-            ::util::unreachable()
-        } else {
-            panic!("entered unreachable code")
-        }
-    };
-}
 
 pub use grapheme::{Gc, GcBuf};
 
