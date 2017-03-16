@@ -1,6 +1,6 @@
 [package]
 name = "strcursor"
-version = "0.2.4"
+version = "0.3.0"
 authors = ["Daniel Keep <daniel.keep@gmail.com>"]
 
 description = "Provides a string cursor type for seeking through a string whilst respecting grapheme cluster and code point boundaries."
