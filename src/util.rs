@@ -25,7 +25,7 @@ pub unsafe fn unreachable() -> ! {
 
 TODO: The following code is nicked from libcore, owing to `encode_utf8` not being stable yet.  Specifically, <https://github.com/rust-lang/rust/blob/3d7cd77e442ce34eaac8a176ae8be17669498ebc/src/libcore/char.rs>.
 
-This should all be removed as soon as `encode_utf8` *is* stable.
+`encode_utf8` is stable as of Rust 1.15.  However, the minimum version is 1.7, so this needs to hang around until the minimum version is at least 1.15.
 
 */
 
