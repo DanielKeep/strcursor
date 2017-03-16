@@ -401,18 +401,46 @@ impl<'a> StrCursor<'a> {
     /**
     Returns the contents of the string *between* this cursor and another cursor.
 
+    The order of the cursors does not matter; `a.slice_between(b)` and `b.slice_between(a)` produce the same results.
+
     Returns `None` if the cursors are from different strings (even different subsets of the same string).
     */
     #[inline]
-    pub fn slice_between(&self, until: StrCursor<'a>) -> Option<&'a str> {
-        if !str_eq_literal(self.s, until.s) {
+    pub fn slice_between(&self, other: StrCursor<'a>) -> Option<&'a str> {
+        if !str_eq_literal(self.s, other.s) {
             None
         } else {
             use std::cmp::{max, min};
             unsafe {
-                let beg = min(self.at, until.at);
-                let end = max(self.at, until.at);
+                let beg = min(self.at, other.at);
+                let end = max(self.at, other.at);
                 let len = end as usize - beg as usize;
+                let bytes = ::std::slice::from_raw_parts(beg, len);
+                Some(::std::str::from_utf8_unchecked(bytes))
+            }
+        }
+    }
+
+    /**
+    Returns the contents of the string *starting* at this cursor, ending at another.
+
+    The order of the cursors matters; if `b` points to a position *before* `a` within the same string, `a.slice_until(b)` will result in an empty string slice.
+
+    Returns `None` if the cursors are from different strings (even different subsets of the same string).
+    */
+    #[inline]
+    pub fn slice_until(&self, end: StrCursor<'a>) -> Option<&'a str> {
+        if !str_eq_literal(self.s, end.s) {
+            None
+        } else {
+            unsafe {
+                let beg = self.at;
+                let end = end.at;
+                let len = if end >= beg {
+                    end as usize - beg as usize
+                } else {
+                    0
+                };
                 let bytes = ::std::slice::from_raw_parts(beg, len);
                 Some(::std::str::from_utf8_unchecked(bytes))
             }
@@ -925,6 +953,20 @@ fn test_slice_between() {
     assert_eq!(cur1.slice_between(cur0), Some(s));
     assert_eq!(cur0.slice_between(cur2), None);
     assert_eq!(cur0.slice_between(cur3), None);
+}
+
+#[cfg(test)]
+#[test]
+fn test_slice_until() {
+    let s = "they hit, fight, kick, wreak havoc, and rejoice";
+    let cur0 = StrCursor::new_at_start(s);
+    let cur1 = StrCursor::new_at_end(s);
+    let cur2 = StrCursor::new_at_end("nobody knows what they're lookin' for");
+    let cur3 = StrCursor::new_at_end(&s[1..]);
+    assert_eq!(cur0.slice_until(cur1), Some(s));
+    assert_eq!(cur1.slice_until(cur0), Some(""));
+    assert_eq!(cur0.slice_until(cur2), None);
+    assert_eq!(cur0.slice_until(cur3), None);
 }
 
 #[inline]
