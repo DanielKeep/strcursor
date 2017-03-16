@@ -11,7 +11,7 @@ See the `StrCursor` type for details.
 **Links**
 
 * [Latest Release](https://crates.io/crates/strcursor/)
-* [Latest Docs](https://danielkeep.github.io/strcursor/doc/strcursor/index.html)
+* [Latest Docs](https://docs.rs/strcursor/%2A/strcursor/index.html)
 * [Repository](https://github.com/DanielKeep/strcursor)
 
 ## Compatibility
