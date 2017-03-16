@@ -458,7 +458,7 @@ impl<'a> StrCursor<'a> {
     */
     #[inline]
     pub fn seek_prev(&mut self) {
-        if !self.try_seek_right_gr() {
+        if !self.try_seek_left_gr() {
             panic!("cannot seek past the beginning of a string");
         }
     }
@@ -966,6 +966,178 @@ fn test_next_cp() {
         Some(('!', 33)),
         None,
     ]);
+}
+
+#[cfg(test)]
+#[test]
+fn test_seek_prev() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let mut cur = StrCursor::new_at_end(s);
+    let mut r = vec![];
+    for i in 0..19 {
+        println!("i: {:?}", i);
+        println!("cur.byte_pos(): {:?}", cur.byte_pos());
+        cur.seek_prev();
+        r.push((cur.after().unwrap().as_str(), cur.byte_pos()));
+    }
+    assert_eq!(r, vec![
+        ("!", 32),
+        ("❤", 29),
+        ("💪", 25),
+        (",", 24),
+        ("い", 21),
+        ("嫌", 18),
+        ("大", 15),
+        (",", 14),
+        ("r", 13),
+        ("e", 12),
+        ("g", 11),
+        ("ä", 8),
+        ("J", 7),
+        (",", 6),
+        ("r", 5),
+        ("e", 4),
+        ("g", 3),
+        ("ä", 1),
+        ("J", 0),
+    ]);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn test_seek_prev_panic() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let mut cur = StrCursor::new_at_start(s);
+    cur.seek_prev();
+}
+
+#[cfg(test)]
+#[test]
+fn test_seek_prev_cp() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let mut cur = StrCursor::new_at_end(s);
+    let mut r = vec![];
+    for _ in 0..20 {
+        cur.seek_prev_cp();
+        r.push((cur.cp_after().unwrap(), cur.byte_pos()));
+    }
+    assert_eq!(r, vec![
+        ('!', 32),
+        ('❤', 29),
+        ('💪', 25),
+        (',', 24),
+        ('い', 21),
+        ('嫌', 18),
+        ('大', 15),
+        (',', 14),
+        ('r', 13),
+        ('e', 12),
+        ('g', 11),
+        ('̈', 9),
+        ('a', 8),
+        ('J', 7),
+        (',', 6),
+        ('r', 5),
+        ('e', 4),
+        ('g', 3),
+        ('ä', 1),
+        ('J', 0),
+    ]);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn test_seek_prev_cp_panic() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let mut cur = StrCursor::new_at_start(s);
+    cur.seek_prev_cp();
+}
+
+#[cfg(test)]
+#[test]
+fn test_seek_next() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let mut cur = StrCursor::new_at_start(s);
+    let mut r = vec![];
+    for _ in 0..19 {
+        cur.seek_next();
+        r.push((cur.before().unwrap().as_str(), cur.byte_pos()));
+    }
+    assert_eq!(r, vec![
+        ("J", 1),
+        ("ä", 3),
+        ("g", 4),
+        ("e", 5),
+        ("r", 6),
+        (",", 7),
+        ("J", 8),
+        ("ä", 11),
+        ("g", 12),
+        ("e", 13),
+        ("r", 14),
+        (",", 15),
+        ("大", 18),
+        ("嫌", 21),
+        ("い", 24),
+        (",", 25),
+        ("💪", 29),
+        ("❤", 32),
+        ("!", 33),
+    ]);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn test_seek_next_panic() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let mut cur = StrCursor::new_at_end(s);
+    cur.seek_next();
+}
+
+#[cfg(test)]
+#[test]
+fn test_seek_next_cp() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let mut cur = StrCursor::new_at_start(s);
+    let mut r = vec![];
+    for _ in 0..20 {
+        cur.seek_next_cp();
+        r.push((cur.cp_before().unwrap(), cur.byte_pos()));
+    }
+    assert_eq!(r, vec![
+        ('J', 1),
+        ('ä', 3),
+        ('g', 4),
+        ('e', 5),
+        ('r', 6),
+        (',', 7),
+        ('J', 8),
+        ('a', 9),
+        ('̈', 11),
+        ('g', 12),
+        ('e', 13),
+        ('r', 14),
+        (',', 15),
+        ('大', 18),
+        ('嫌', 21),
+        ('い', 24),
+        (',', 25),
+        ('💪', 29),
+        ('❤', 32),
+        ('!', 33),
+    ]);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn test_seek_next_cp_panic() {
+    let s = "Jäger,Jäger,大嫌い,💪❤!";
+    let mut cur = StrCursor::new_at_end(s);
+    cur.seek_next_cp();
 }
 
 #[cfg(test)]
