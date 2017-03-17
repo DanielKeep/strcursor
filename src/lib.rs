@@ -97,6 +97,7 @@ There are also some unsafe methods for performance-critical cases.  Note that th
 
 - `unsafe_seek_…`: seeks a given number of bytes left/right.
 - `unsafe_set_at`: sets the cursor position directly.
+- `unsafe_slice_until`: slices between two cursors.
 */
 pub struct StrCursor<'a> {
     s: &'a str,
@@ -299,15 +300,7 @@ impl<'a> StrCursor<'a> {
             None
         } else {
             unsafe {
-                let beg = self.at;
-                let end = end.at;
-                let len = if end >= beg {
-                    end as usize - beg as usize
-                } else {
-                    0
-                };
-                let bytes = ::std::slice::from_raw_parts(beg, len);
-                Some(::std::str::from_utf8_unchecked(bytes))
+                Some(self.unsafe_slice_until(end))
             }
         }
     }
@@ -519,6 +512,99 @@ impl<'a> StrCursor<'a> {
 }
 
 /**
+Predicate methods.
+*/
+impl<'a> StrCursor<'a> {
+    #[inline]
+    pub fn before_while<P>(self, mut predicate: P) -> (&'a str, Self)
+    where P: FnMut(&'a Gc) -> bool {
+        let start = self;
+        let mut at = self;
+        loop {
+            match at.prev() {
+                None => break,
+                Some((gc, at2)) => {
+                    if predicate(gc) {
+                        at = at2;
+                    } else {
+                        break;
+                    }
+                },
+            }
+        }
+        unsafe {
+            (at.unsafe_slice_until(start), at)
+        }
+    }
+
+    #[inline]
+    pub fn after_while<P>(self, mut predicate: P) -> (&'a str, Self)
+    where P: FnMut(&'a Gc) -> bool {
+        let start = self;
+        let mut at = self;
+        loop {
+            match at.next() {
+                None => break,
+                Some((gc, at2)) => {
+                    if predicate(gc) {
+                        at = at2;
+                    } else {
+                        break;
+                    }
+                },
+            }
+        }
+        unsafe {
+            (start.unsafe_slice_until(at), at)
+        }
+    }
+
+    #[inline]
+    pub fn cp_before_while<P>(self, mut predicate: P) -> (&'a str, Self)
+    where P: FnMut(char) -> bool {
+        let start = self;
+        let mut at = self;
+        loop {
+            match at.prev_cp() {
+                None => break,
+                Some((cp, at2)) => {
+                    if predicate(cp) {
+                        at = at2;
+                    } else {
+                        break;
+                    }
+                },
+            }
+        }
+        unsafe {
+            (at.unsafe_slice_until(start), at)
+        }
+    }
+
+    #[inline]
+    pub fn cp_after_while<P>(self, mut predicate: P) -> (&'a str, Self)
+    where P: FnMut(char) -> bool {
+        let start = self;
+        let mut at = self;
+        loop {
+            match at.next_cp() {
+                None => break,
+                Some((cp, at2)) => {
+                    if predicate(cp) {
+                        at = at2;
+                    } else {
+                        break;
+                    }
+                },
+            }
+        }
+        unsafe {
+            (start.unsafe_slice_until(at), at)
+        }
+    }
+}
+
+/**
 Iterator methods.
 */
 impl<'a> StrCursor<'a> {
@@ -599,6 +685,22 @@ impl<'a> StrCursor<'a> {
     #[inline]
     pub unsafe fn unsafe_set_at(&mut self, s: &'a str) {
         self.at = s.as_bytes().as_ptr();
+    }
+
+    /**
+    Returns the string slice between two cursors, without performing any bounds or validity checks.
+    */
+    #[inline]
+    pub unsafe fn unsafe_slice_until(self, end: Self) -> &'a str {
+        let beg = self.at;
+        let end = end.at;
+        let len = if end >= beg {
+            end as usize - beg as usize
+        } else {
+            0
+        };
+        let bytes = ::std::slice::from_raw_parts(beg, len);
+        ::std::str::from_utf8_unchecked(bytes)
     }
 }
 
