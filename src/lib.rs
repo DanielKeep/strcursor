@@ -50,9 +50,11 @@ extern crate unicode_segmentation as uniseg;
 pub use grapheme::{Gc, GcBuf};
 
 pub mod grapheme;
+pub mod iter;
 mod util;
 
 use uniseg::UnicodeSegmentation as UniSeg;
+use iter::{IterAfter, IterBefore, IterCpAfter, IterCpBefore};
 
 /**
 This type represents a cursor into a string slice; that is, in addition to having a beginning and end, it also has a current position between those two.  This position can be seeked left and right within those bounds.
@@ -88,6 +90,8 @@ Variants that deal with code points are not explicitly mentioned here.  In gener
 - `at_prev`/`at_next`: returns a derived, relatively positioned cursor.
 - `prev`/`next`: efficiently combines `before`/`after` and `at_prev`/`at_next`
 - `seek_prev`/`seek_next`: repositions a cursor in-place, panicking on out-of-bounds movement.
+
+- `iter_before`/`iter_after`: iterate over grapheme clusters before/after the cursor.
 
 There are also some unsafe methods for performance-critical cases.  Note that these methods *do not* check their arguments for validity, and if misused can violate Rust's safety guarantees.
 
@@ -511,6 +515,59 @@ impl<'a> StrCursor<'a> {
         if !self.try_seek_right_cp() {
             panic!("cannot seek past the end of a string");
         }
+    }
+}
+
+/**
+Iterator methods.
+*/
+impl<'a> StrCursor<'a> {
+    /**
+    Iterates over grapheme clusters right-to-left, starting at the cursor.
+
+    You can call the `with_cursor` method on the result to get an iterator over `(&Gc, StrCursor)` pairs.
+    */
+    #[inline]
+    pub fn iter_before(self) -> IterBefore<'a> {
+        IterBefore(self)
+    }
+
+    /**
+    Iterates over grapheme clusters left-to-right, starting at the cursor.
+
+    You can call the `with_cursor` method on the result to get an iterator over `(&Gc, StrCursor)` pairs.
+    */
+    #[inline]
+    pub fn iter_after(self) -> IterAfter<'a> {
+        IterAfter(self)
+    }
+
+    /**
+    Iterates over grapheme clusters right-to-left, starting at the cursor.
+
+    You can call the `with_cursor` method on the result to get an iterator over `(&Gc, StrCursor)` pairs.
+
+    # Note
+
+    Where possible, you should prefer `iter_before`.
+    */
+    #[inline]
+    pub fn iter_cp_before(self) -> IterCpBefore<'a> {
+        IterCpBefore(self)
+    }
+
+    /**
+    Iterates over grapheme clusters left-to-right, starting at the cursor.
+
+    You can call the `with_cursor` method on the result to get an iterator over `(&Gc, StrCursor)` pairs.
+
+    # Note
+
+    Where possible, you should prefer `iter_after`.
+    */
+    #[inline]
+    pub fn iter_cp_after(self) -> IterCpAfter<'a> {
+        IterCpAfter(self)
     }
 }
 
