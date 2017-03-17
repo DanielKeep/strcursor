@@ -145,6 +145,41 @@ impl Gc {
     }
 
     /**
+    Checks the given predicate against a non-composed cluster.
+
+    This can be used in cases where you want to test some predicate on "simple" grapheme clusters, without having to separately check that the grapheme has no combining marks, and that the base code point satisfies the predicate.
+
+    If the grapheme cluster contains combining marks, this method *always* returns `false`.
+
+    # Example
+
+    ```rust
+    # use strcursor::Gc;
+    // space + combining double rightwards arrow below
+    let gc0 = Gc::from_str(" ͢").unwrap();
+    // just space
+    let gc1 = Gc::from_str(" ").unwrap();
+
+    // gc0 probably shouldn't be interpreted as whitespace, but this passes:
+    assert_eq!(gc0.base_char().is_whitespace(), true);
+    assert_eq!(gc1.base_char().is_whitespace(), true);
+
+    // Solution: only apply test to "simple" clusters:
+    assert_eq!(gc0.is_base(char::is_whitespace), false);
+    assert_eq!(gc1.is_base(char::is_whitespace), true);
+    ```
+    */
+    pub fn is_base<P>(&self, predicate: P) -> bool
+    where P: FnOnce(char) -> bool {
+        if self.has_marks() {
+            false
+        } else {
+            let cp = self.base_char();
+            predicate(cp)
+        }
+    }
+
+    /**
     Returns the combining marks as a string slice.
 
     The result of this method may be empty, or of arbitrary length.
