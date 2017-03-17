@@ -57,6 +57,7 @@ Variants that deal with code points are not explicitly mentioned here.  In gener
 
 There are also some unsafe methods for performance-critical cases.  Note that these methods *do not* check their arguments for validity, and if misused can violate Rust's safety guarantees.
 
+- `unsafe_new_at_byte_pos`: create a cursor at a given position.
 - `unsafe_seek_…`: seeks a given number of bytes left/right.
 - `unsafe_set_at`: sets the cursor position directly.
 - `unsafe_slice_until`: slices between two cursors.
