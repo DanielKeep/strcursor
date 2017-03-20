@@ -1,11 +1,11 @@
 [package]
 name = "strcursor"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["Daniel Keep <daniel.keep@gmail.com>"]
 
 description = "Provides a string cursor type for seeking through a string whilst respecting grapheme cluster and code point boundaries."
 repository = "https://github.com/DanielKeep/strcursor"
-documentation = "https://docs.rs/strcursor/0.2.5/strcursor/index.html"
+documentation = "https://docs.rs/strcursor/0.2.6/strcursor/index.html"
 readme = "README.md"
 keywords = ["str", "string", "cursor", "grapheme", "unicode"]
 license = "MIT/Apache-2.0"
